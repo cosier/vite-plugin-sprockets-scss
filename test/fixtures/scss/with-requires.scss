@@ -1,0 +1,10 @@
+
+            // = require '_variables'
+            // = require '_mixins'
+            // = require_tree './components'
+
+            .main {
+                @include center;
+                background: $primary-color;
+            }
+        

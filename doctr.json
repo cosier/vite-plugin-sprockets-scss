@@ -1,0 +1,27 @@
+{
+  "sources": [
+    {
+      "include": [
+        "app.tree",
+        "package.json",
+        "bunfig.toml",
+        "scripts/**/*",
+        "src/**/*",
+        "test/**/*"
+      ],
+      "output": "docs/file-summary.md",
+      "exclude": []
+    }
+  ],
+  "options": {
+    "extensions": [
+      ".ts",
+      ".tsx",
+      ".js",
+      ".jsx",
+      ".md"
+    ],
+    "recursive": true,
+    "followSymlinks": false
+  }
+}

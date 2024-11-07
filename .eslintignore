@@ -1,0 +1,34 @@
+# Bun build artifacts
+dist/
+coverage/
+
+# Dependencies
+node_modules/
+
+# Logs and system files
+*.log
+.DS_Store
+
+# IDE files
+.idea/
+.vscode/
+
+# Test fixtures
+test/fixtures/
+
+# Editor backup files
+*~
+*.swp
+*.swo
+
+# Cache directories
+.cache/
+.temp/
+
+# Source maps
+*.map
+
+# Development files
+.env
+.env.*
+!.env.example

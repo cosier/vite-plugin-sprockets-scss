@@ -1,0 +1,78 @@
+{
+    "name": "vite-plugin-sprockets-scss",
+    "version": "0.3.3",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/types/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/types/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist",
+        "src",
+        "LICENSE",
+        "README.md",
+        "CHANGELOG.md"
+    ],
+    "scripts": {
+        "build": "bun build ./src/index.ts --outdir ./dist --target node",
+        "dev": "bun run scripts/dev.ts",
+        "dev:watch": "bun run --watch scripts/dev.ts",
+        "clean": "rm -rf dist",
+        "typecheck": "bun x tsc --noEmit",
+        "test": "bun run setup && bun test",
+        "test:watch": "bun run setup && bun test --watch",
+        "prepare": "bun run build",
+        "format": "bun x prettier --write .",
+        "format:fix": "prettier --write .",
+        "lint": "bun x eslint . --ext .ts",
+        "lint:fix": "eslint . --ext .ts --fix",
+        "prepublishOnly": "bun run validate:all && bun run build",
+        "coverage": "bun test --coverage",
+        "preversion": "bun run test",
+        "postversion": "git push && git push --tags",
+        "docs": "typedoc --out docs src/index.ts",
+        "docs:build": "typedoc --out docs src/index.ts",
+        "docs:serve": "bun x serve docs",
+        "validate": "bun run typecheck && bun run test && bun run lint",
+        "validate:all": "bun run typecheck && bun run test && bun run lint && bun run format",
+        "release": "bun run validate:all && bun run build",
+        "check-types": "tsc --noEmit",
+        "setup": "chmod +x scripts/setup-fixtures.sh && ./scripts/setup-fixtures.sh"
+    },
+    "peerDependencies": {
+        "vite": "^5.4.10",
+        "sass": "^1.80.6"
+    },
+    "dependencies": {
+        "fast-glob": "^3.3.2"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "bun-types": "latest",
+        "typescript": "^5.5.4",
+        "@typescript-eslint/eslint-plugin": "^7.0.0",
+        "@typescript-eslint/parser": "^7.0.0",
+        "eslint": "^8.56.0",
+        "prettier": "^3.2.0",
+        "typedoc": "^0.25.0",
+        "serve": "^14.2.1"
+    },
+    "keywords": [
+        "vite",
+        "plugin",
+        "scss",
+        "sprockets",
+        "rails"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/cosier/vite-plugin-sprockets-scss"
+    },
+    "bugs": {
+        "url": "https://github.com/cosier/vite-plugin-sprockets-scss/issues"
+    }
+}

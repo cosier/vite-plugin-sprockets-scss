@@ -1,0 +1,8 @@
+src/
+test/
+scripts/
+coverage/
+.*
+*.config.ts
+*.toml
+tsconfig.json

@@ -1,0 +1,28 @@
+[build]
+entrypoints = ["./src/index.ts"]
+outdir = "./dist"
+minify = true
+sourcemap = "external"
+target = "node"
+format = "esm"
+
+[build.commonjs]
+platform = "node"
+format = "esm"
+
+[test]
+# Use Bun's built-in test runner
+coverage = true
+pattern = "test/**/*.test.ts"
+setup = "test/setup.ts"
+
+[install]
+# Ensure we use exact versions
+save-exact = true
+# Skip package-lock.json generation
+package-lock = false
+
+[dev]
+port = 3000
+hot = true
+watch = ["src/**/*"]
