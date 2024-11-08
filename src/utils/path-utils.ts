@@ -20,11 +20,23 @@ export function createBoundaryMarker(filePath: string): BoundaryMarker {
 }
 
 export function matchWildcard(pattern: string, str: string): boolean {
+    // Normalize paths
+    pattern = normalizePath(pattern)
+    str = normalizePath(str)
+
+    // Escape special regex chars except * and ?
     const regexPattern = pattern
-        .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape special regex chars
-        .replace(/\*/g, '.*')
-        .replace(/\?/g, '.')
-    return new RegExp(`^${regexPattern}$`).test(str)
+        .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+        // Handle ** (match any number of path segments)
+        .replace(/\*\*/g, '@@GLOBSTAR@@')
+        // Handle * (match anything within a path segment)
+        .replace(/\*/g, '[^/]*')
+        .replace(/\?/g, '[^/]')
+        // Replace globstar placeholder
+        .replace(/@@GLOBSTAR@@/g, '.*')
+
+    const regex = new RegExp(`^${regexPattern}$`)
+    return regex.test(str)
 }
 
 export function isAbsoluteOrRelativePath(path: string): boolean {

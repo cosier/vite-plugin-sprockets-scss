@@ -27,7 +27,9 @@ export class Logger {
     error(message: string, error?: Error): void {
         console.error(
             `${this.prefix} Error: ${this.getIndent()}${message}`,
-            error || ''
+            error || '',
+            error?.message,
+            error?.stack
         )
         if (error?.stack) {
             console.error(`${this.prefix} Stack:`, error.stack)

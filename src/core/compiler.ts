@@ -6,7 +6,7 @@
 import * as sass from 'sass'
 import path from 'path'
 import { promises as fs } from 'fs'
-import { CompilationResult, ResolvedOptions, CompilationStats, Syntax, SassCompilerOptions } from '../types'
+import { CompilationResult, ResolvedOptions, CompilationStats, Syntax } from '../types'
 import { Logger } from '../utils/logger'
 import { ERROR_CODES } from '../constants'
 import { SprocketsError, ErrorCode } from '../utils/errors'
@@ -27,6 +27,48 @@ export class ScssCompiler {
         }
     }
 
+    private async loadGlobalMixins(): Promise<string[]> {
+        if (!this.options.globalMixins?.length) return [];
+
+        const results = await Promise.all(
+            this.options.globalMixins.map(async (mixinPath) => {
+                try {
+                    // Try various file patterns
+                    const variations = [
+                        mixinPath,
+                        `_${mixinPath}`,
+                        `${mixinPath}.scss`,
+                        `_${mixinPath}.scss`
+                    ];
+
+                    for (const variant of variations) {
+                        const fullPath = path.isAbsolute(variant)
+                            ? variant
+                            : path.join(this.options.root, 'app/assets/stylesheets', variant);
+
+                        try {
+                            const content = await fs.readFile(fullPath, 'utf-8');
+                            return { path: fullPath, content };
+                        } catch (e) {
+                            // Continue to next variation
+                            continue;
+                        }
+                    }
+
+                    throw new Error(`Global mixin file not found: ${mixinPath}`);
+                } catch (error) {
+                    this.logger.error(`Failed to load global mixin: ${mixinPath}`, error as Error);
+                    throw new Error(`Failed to load global mixin '${mixinPath}': ${error.message}`);
+                }
+            })
+        );
+
+        return results.map(({ path: filePath, content }) => {
+            const relativePath = path.relative(this.options.root, filePath);
+            return `// Global mixin from: ${relativePath}\n${content}\n`;
+        });
+    }
+
     async compile(
         content: string,
         filePath: string,
@@ -36,13 +78,22 @@ export class ScssCompiler {
             this.logger.debug(`Compiling: ${filePath}`)
             this.performanceMonitor?.start()
 
-            // Add any additional imports to the top of the content
-            const contentWithImports = additionalImports.length > 0
-                ? additionalImports.map(imp => `@import "${imp}";`).join('\n') + '\n' + content
-                : content
+            let globalMixins: string[];
+            try {
+                globalMixins = await this.loadGlobalMixins();
+            } catch (error) {
+                this.logger.error('Failed to load global mixins', error as Error);
+                throw error;
+            }
+
+            const contentWithImports = [
+                ...globalMixins,
+                ...additionalImports.map(imp => `@import "${imp}";`),
+                content
+            ].join('\n')
 
             const result = sass.compileString(contentWithImports, {
-                loadPaths: this.options.includePaths,
+                loadPaths: [...this.options.includePaths, path.join(this.options.root, 'app/assets/stylesheets')],
                 sourceMap: true,
                 sourceMapIncludeSources: true,
                 importers: [
@@ -71,16 +122,24 @@ export class ScssCompiler {
 
             this.performanceMonitor?.mark('compile-end')
 
-            return {
+            const compilationResult = {
                 css: result.css,
                 map: sourceMap,
                 dependencies: result.loadedUrls.map((url: URL) => url.toString()),
+                intermediateScss: this.options.preserveIntermediateScss ? contentWithImports : undefined,
                 errors: [],
                 stats: {
                     cacheSize: this.sourceMapCache.size,
                     duration: this.performanceMonitor?.getDuration() || 0
                 }
             }
+
+            if (this.options.preserveIntermediateScss) {
+                await this.writeIntermediateScss(filePath, contentWithImports);
+            }
+
+            return compilationResult;
+
         } catch (error) {
             const errorMessage = (error as Error).message
             this.logger.error(
@@ -108,8 +167,19 @@ export class ScssCompiler {
             this.logger.debug(`Compiling file: ${filePath}`)
             this.performanceMonitor?.start()
 
+            let globalMixins: string[];
+            try {
+                globalMixins = await this.loadGlobalMixins();
+            } catch (error) {
+                this.logger.error('Failed to load global mixins', error as Error);
+                throw error;
+            }
+
+            const fileContent = await fs.readFile(filePath, 'utf-8');
+            const contentWithMixins = [...globalMixins, fileContent].join('\n');
+
             const result = await sass.compileAsync(filePath, {
-                loadPaths: this.options.includePaths,
+                loadPaths: [...this.options.includePaths, path.join(this.options.root, 'app/assets/stylesheets')],
                 sourceMap: true,
                 importers: [
                     {
@@ -131,16 +201,20 @@ export class ScssCompiler {
                 }
             })
 
-            const fileContent = await fs.readFile(filePath, 'utf-8')
-            const sourceMap = this.generateSourceMap(fileContent, filePath, result.sourceMap)
+            const sourceMap = this.generateSourceMap(contentWithMixins, filePath, result.sourceMap)
             this.sourceMapCache.set(filePath, sourceMap)
 
             this.performanceMonitor?.mark('compile-file-end')
+
+            if (this.options.preserveIntermediateScss) {
+                await this.writeIntermediateScss(filePath, contentWithMixins);
+            }
 
             return {
                 css: result.css,
                 map: sourceMap,
                 dependencies: result.loadedUrls.map((url: URL) => url.toString()),
+                intermediateScss: this.options.preserveIntermediateScss ? contentWithMixins : undefined,
                 errors: [],
                 stats: {
                     cacheSize: this.sourceMapCache.size,
@@ -167,6 +241,18 @@ export class ScssCompiler {
                 }
             }
         }
+    }
+
+    private async writeIntermediateScss(filePath: string, content: string): Promise<void> {
+        const intermediatePath = this.options.intermediateOutputPath ||
+            path.join(this.options.outputPath, 'intermediate');
+        const outputPath = path.join(
+            intermediatePath,
+            path.basename(filePath)
+        );
+
+        await fs.mkdir(path.dirname(outputPath), { recursive: true });
+        await fs.writeFile(outputPath, content);
     }
 
     private detectSyntax(filePath: string): Syntax {

@@ -11,7 +11,7 @@ export const TEST_DIRS = {
     FIXTURES: path.join(pluginRootDir, 'test', 'fixtures'),
     OUTPUT: path.join(pluginRootDir, 'tmp', 'test-output'),
     CACHE: path.join(pluginRootDir, 'tmp', 'test-cache'),
-    EXAMPLE_APP: path.join(pluginRootDir, 'tmp', 'example-app')
+    EXAMPLE_APP: path.join(pluginRootDir, 'test', 'fixtures', 'rails'),
 }
 
 export const EXAMPLE_APP_DIRS = {
@@ -19,18 +19,24 @@ export const EXAMPLE_APP_DIRS = {
     ASSETS: {
         ROOT: path.join(TEST_DIRS.EXAMPLE_APP, 'app/assets'),
         STYLESHEETS: path.join(TEST_DIRS.EXAMPLE_APP, 'app/assets/stylesheets'),
-        COMPONENTS: path.join(TEST_DIRS.EXAMPLE_APP, 'app/assets/stylesheets/components'),
+        COMPONENTS: path.join(
+            TEST_DIRS.EXAMPLE_APP,
+            'app/assets/stylesheets/components'
+        ),
     },
     VENDOR: {
         ROOT: path.join(TEST_DIRS.EXAMPLE_APP, 'vendor'),
         ASSETS: path.join(TEST_DIRS.EXAMPLE_APP, 'vendor/assets'),
-        STYLESHEETS: path.join(TEST_DIRS.EXAMPLE_APP, 'vendor/assets/stylesheets'),
+        STYLESHEETS: path.join(
+            TEST_DIRS.EXAMPLE_APP,
+            'vendor/assets/stylesheets'
+        ),
     },
     PUBLIC: {
         ROOT: path.join(TEST_DIRS.EXAMPLE_APP, 'public'),
         ASSETS: path.join(TEST_DIRS.EXAMPLE_APP, 'public/assets'),
     },
-    NODE_MODULES: path.join(TEST_DIRS.EXAMPLE_APP, 'node_modules')
+    NODE_MODULES: path.join(TEST_DIRS.EXAMPLE_APP, 'node_modules'),
 }
 
 // Setup before all tests
@@ -49,16 +55,25 @@ beforeAll(async () => {
     await mkdir(TEST_DIRS.OUTPUT, { recursive: true })
     await mkdir(TEST_DIRS.CACHE, { recursive: true })
 
+    debugger
     // Create test files
     const files = {
-        'app/assets/stylesheets/basic.scss': '.test-component { background: #fff; padding: 20px; }',
-        'app/assets/stylesheets/_variables.scss': '$primary-color: #ff8100; $font-family-base: "myriad-pro", sans-serif;',
-        'app/assets/stylesheets/_mixins.scss': '@mixin center { display: flex; align-items: center; justify-content: center; }',
-        'app/assets/stylesheets/components/_header.scss': '.header { background: $primary-color; }',
-        'app/assets/stylesheets/components/_footer.scss': '.footer { color: $primary-color; }',
-        'app/assets/stylesheets/lib/select2.scss': '.select2 { display: inline-block; }',
-        'app/assets/stylesheets/lib/select2.css': '.select2 { display: inline-block; }',
-        'vendor/assets/stylesheets/lib/select2.scss': '.select2-vendor { display: block; }',
+        'app/assets/stylesheets/basic.scss':
+            '.test-component { background: #fff; padding: 20px; }',
+        'app/assets/stylesheets/_variables.scss':
+            '$primary-color: #ff8100; $font-family-base: "myriad-pro", sans-serif;',
+        'app/assets/stylesheets/_mixins.scss':
+            '@mixin center { display: flex; align-items: center; justify-content: center; }',
+        'app/assets/stylesheets/components/_header.scss':
+            '.header { background: $primary-color; }',
+        'app/assets/stylesheets/components/_footer.scss':
+            '.footer { color: $primary-color; }',
+        'app/assets/stylesheets/lib/select2.scss':
+            '.select2 { display: inline-block; }',
+        'app/assets/stylesheets/lib/select2.css':
+            '.select2 { display: inline-block; }',
+        'vendor/assets/stylesheets/lib/select2.scss':
+            '.select2-vendor { display: block; }',
         'app/assets/stylesheets/with-requires.scss': `
             // = require '_variables'
             // = require '_mixins'
@@ -68,12 +83,13 @@ beforeAll(async () => {
                 @include center;
                 background: $primary-color;
             }
-        `
+        `,
     }
 
     for (const [filePath, content] of Object.entries(files)) {
         const fullPath = path.join(TEST_DIRS.EXAMPLE_APP, filePath)
         await mkdir(path.dirname(fullPath), { recursive: true })
+        console.debug(`Writing file: ${fullPath}`)
         await writeFile(fullPath, content)
     }
 })

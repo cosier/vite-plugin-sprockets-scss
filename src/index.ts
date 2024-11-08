@@ -104,12 +104,13 @@ export default function viteSprocketsScss(
             'app/assets/stylesheets'
         )
 
-        logger.group('Processing entry groups')
+        // logger.group('Processing entry groups')
         for (const [groupName, patterns] of Object.entries(
             resolvedOptions.entryGroups
         )) {
+           // console.log('groupName', groupName)
             try {
-                logger.group(`Group: ${groupName}`)
+                // logger.group(`Group: ${groupName}`)
                 let combinedContent = ''
 
                 const matchedFiles = await findFiles(patterns, {
@@ -117,6 +118,7 @@ export default function viteSprocketsScss(
                 })
 
                 for (const file of matchedFiles) {
+                  // console.log("file", file)
                     const fullPath = path.join(stylesDir, file)
                     const content = await fileManager.readFile(fullPath)
                     const resolvedContent = await resolver.resolveRequires(

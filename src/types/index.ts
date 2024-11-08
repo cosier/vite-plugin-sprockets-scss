@@ -10,6 +10,7 @@ export type Syntax = 'scss' | 'indented' | 'css';
 export interface SprocketsPluginOptions {
     root?: string
     includePaths?: string[]
+    fallbackDirs?: string[]
     entryGroups?: Record<string, string[]>
     outputPath?: string
     fileMapping?: Record<string, string>
@@ -19,6 +20,9 @@ export interface SprocketsPluginOptions {
     sourceMap?: boolean
     cache?: boolean
     cacheDirectory?: string
+    globalMixins?: string[]
+    preserveIntermediateScss?: boolean
+    intermediateOutputPath?: string
 }
 
 export interface ResolvedOptions extends Required<SprocketsPluginOptions> {}
@@ -33,6 +37,7 @@ export interface ProcessedFile {
     content: string
     dependencies: string[]
     sourceMap?: string
+    intermediateScss?: string
 }
 
 export interface CompilationResult {
@@ -42,6 +47,7 @@ export interface CompilationResult {
     errors?: string[]
     stats?: CompilationStats
     duration?: number
+    intermediateScss?: string
 }
 
 export interface BoundaryMarker {
@@ -62,6 +68,7 @@ export interface ResolvedContent {
     dependencies: string[]
     sourceMap?: string
     errors?: string[]
+    intermediateScss?: string
 }
 
 export interface BuildContext {

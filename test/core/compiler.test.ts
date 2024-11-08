@@ -27,4 +27,45 @@ describe('SCSS Compiler', () => {
         expect(result.map).toBeDefined();
         expect(JSON.parse(result.map!)).toHaveProperty('version', 3);
     });
+
+    describe('Global Mixins', () => {
+        test('loads and includes global mixins', async () => {
+            const { compiler } = createTestContext({
+                globalMixins: ['variables']
+            });
+
+            const testScss = '.test { color: $brand-primary; }';
+            const result = await compiler.compile(testScss, 'test.scss');
+
+            expect(result.css).toContain('#ff8100'); // $brand-primary value
+            expect(result.errors).toHaveLength(0);
+        });
+
+        test('throws error for missing global mixin', async () => {
+            const { compiler } = createTestContext({
+                globalMixins: ['non-existent-file']
+            });
+
+            await expect(
+                compiler.compile('.test {}', 'test.scss')
+            ).rejects.toThrow('Global mixin file not found');
+        });
+
+        test('handles multiple global mixins in correct order', async () => {
+            const { compiler } = createTestContext({
+                globalMixins: ['variables', '_mixins']
+            });
+
+            const testScss = `.test {
+                color: $brand-primary;
+                @include center;
+            }`;
+
+            const result = await compiler.compile(testScss, 'test.scss');
+
+            expect(result.errors).toHaveLength(0);
+            expect(result.css).toContain('#ff8100');
+            expect(result.css).toContain('display: flex');
+        });
+    });
 });

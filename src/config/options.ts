@@ -21,6 +21,8 @@ export function resolveOptions(
         root: ensurePath(options.root || process.cwd()),
         outputPath: ensurePath(options.outputPath || DEFAULT_OPTIONS.outputPath),
         cacheDirectory: ensurePath(options.cacheDirectory || DEFAULT_OPTIONS.cacheDirectory),
+        // Handle global mixins
+        globalMixins: options.globalMixins || DEFAULT_OPTIONS.globalMixins,
         // Merge arrays and objects
         includePaths: [
             ...(DEFAULT_OPTIONS.includePaths || []),
@@ -89,6 +91,19 @@ export function validateOptions(options: ResolvedOptions): void {
     for (const includePath of options.includePaths) {
         if (!path.isAbsolute(includePath)) {
             throw new Error(`Include path must be absolute: ${includePath}`)
+        }
+    }
+
+    // Validate global mixins
+    if (options.globalMixins && !Array.isArray(options.globalMixins)) {
+        throw new Error('Global mixins must be an array of strings')
+    }
+
+    if (options.globalMixins) {
+        for (const mixin of options.globalMixins) {
+            if (typeof mixin !== 'string') {
+                throw new Error(`Invalid global mixin: ${mixin}. Must be a string path.`)
+            }
         }
     }
 }

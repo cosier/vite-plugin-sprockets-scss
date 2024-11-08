@@ -102,7 +102,7 @@ export class SprocketsResolver {
        this.logger.debug(`Alias resolved path: ${aliasedPath}`)
 
        // Try to find the file using the aliased path
-       const resolvedPath = await this.findFileInPaths(aliasedPath, currentDir)
+       const resolvedPath = this.findFileInPaths(aliasedPath, currentDir)
        if (!resolvedPath) {
            throw new FileNotFoundError(importPath)
        }
@@ -269,7 +269,13 @@ ${result.content}
            }
        }
 
-       const searchPaths = [currentDir, ...this.options.includePaths]
+       const searchPaths = [
+           currentDir,
+           ...this.options.includePaths,
+           ...(this.options.fallbackDirs || []).map(dir =>
+               path.isAbsolute(dir) ? dir : path.join(this.options.root, dir)
+           )
+       ]
        const extensions = importPath.includes('.') ? [''] : SUPPORTED_EXTENSIONS
 
        for (const searchPath of searchPaths) {

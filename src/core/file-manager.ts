@@ -56,9 +56,12 @@ export class FileManager {
     }
 
     async ensureOutputDirectories(): Promise<void> {
-        const dirs = Object.values(OUTPUT_DIRS).map((dir) =>
-            path.join(this.options.outputPath, dir)
-        )
+        const dirs = [
+            ...Object.values(OUTPUT_DIRS),
+            this.options.preserveIntermediateScss ? 'intermediate' : null
+        ]
+        .filter(Boolean)
+        .map((dir) => path.join(this.options.outputPath, dir as string))
 
         for (const dir of dirs) {
             if (!existsSync(dir)) {
@@ -77,12 +80,32 @@ export class FileManager {
         )
     }
 
+    getIntermediateScssPath(fileName: string, isGroup: boolean): string {
+        const dir = isGroup ? 'group' : 'single'
+        const intermediatePath = this.options.intermediateOutputPath ||
+            path.join(this.options.outputPath, 'intermediate')
+
+        return path.join(
+            intermediatePath,
+            dir,
+            fileName
+        )
+    }
+
     async writeProcessedFile(
         processedFile: ProcessedFile,
         isGroup: boolean = false
     ): Promise<void> {
         const outputPath = this.getOutputPath(processedFile.path, isGroup)
         await this.writeFile(outputPath, processedFile.content)
+
+        if (this.options.preserveIntermediateScss) {
+            const intermediateScss = this.getIntermediateScssPath(processedFile.path, isGroup)
+            await this.writeFile(
+                intermediateScss,
+                processedFile.intermediateScss || processedFile.content
+            )
+        }
     }
 
     async cleanup(): Promise<void> {
@@ -94,9 +117,19 @@ export class FileManager {
             this.logger.debug(
                 `Cleaned up output directory: ${this.options.outputPath}`
             )
+
+            if (this.options.intermediateOutputPath) {
+                await fs.rm(this.options.intermediateOutputPath, {
+                    recursive: true,
+                    force: true,
+                })
+                this.logger.debug(
+                    `Cleaned up intermediate directory: ${this.options.intermediateOutputPath}`
+                )
+            }
         } catch (error) {
             this.logger.error(
-                'Failed to cleanup output directory',
+                'Failed to cleanup directories',
                 error as Error
             )
         }
