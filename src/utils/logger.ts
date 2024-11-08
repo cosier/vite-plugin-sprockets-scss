@@ -3,6 +3,8 @@
  * @description: Logging and debugging utilities
  */
 
+import { CompilationError } from './errors'
+
 export class Logger {
     private isDebug: boolean
     private prefix: string = '[Sprockets-SCSS]'
@@ -24,15 +26,18 @@ export class Logger {
         console.log(`${this.prefix} ${this.getIndent()}${message}`, ...args)
     }
 
-    error(message: string, error?: Error): void {
+    error(message: string | Error): void {
+        if (message instanceof CompilationError) {
+            console.error(message.formatError())
+            return
+        }
+
         console.error(
-            `${this.prefix} Error: ${this.getIndent()}${message}`,
-            error || '',
-            error?.message,
-            error?.stack
+            `${this.prefix} Error: ${typeof message === 'string' ? message : message.message}`
         )
-        if (error?.stack) {
-            console.error(`${this.prefix} Stack:`, error.stack)
+
+        if (message instanceof Error && this.isDebug) {
+            console.error(message.stack)
         }
     }
 

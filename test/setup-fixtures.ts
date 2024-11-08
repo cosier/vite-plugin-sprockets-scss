@@ -45,6 +45,9 @@ export async function setupFixtures(): Promise<void> {
     for (const [filePath, content] of Object.entries(files)) {
         const fullPath = path.join(railsRoot, filePath)
         await fs.mkdir(path.dirname(fullPath), { recursive: true })
-        await fs.writeFile(fullPath, content.trim() + '\n')
+        // only write file if it doesn't exist
+        if (!(await fs.access(fullPath).then(() => true).catch(() => false))) {
+            await fs.writeFile(fullPath, content.trim() + '\n')
+        }
     }
 } 

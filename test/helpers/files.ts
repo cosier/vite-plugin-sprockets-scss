@@ -20,7 +20,9 @@ export async function writeFixture(
     try {
         const filePath = path.join(TEST_DIRS.FIXTURES, fileName)
         await fs.mkdir(path.dirname(filePath), { recursive: true })
-        await fs.writeFile(filePath, content, 'utf-8')
+        if (!(await fs.access(filePath).then(() => true).catch(() => false))) {
+            await fs.writeFile(filePath, content, 'utf-8')
+        }
     } catch (error) {
         throw new Error(
             `Failed to write fixture file ${fileName}: ${error.message}`

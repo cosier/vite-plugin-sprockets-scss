@@ -46,16 +46,19 @@ beforeAll(async () => {
     };
 
     for (const [filePath, content] of Object.entries(files)) {
-        const fullPath = path.join(TEST_DIRS.EXAMPLE_APP, filePath);
+        const fullPath = path.join(TEST_DIRS.EXAMPLE_APP, filePath);    
         await fs.mkdir(path.dirname(fullPath), { recursive: true });
-        await fs.writeFile(fullPath, content);
+        // only write file if it doesn't exist
+        if (!(await fs.access(fullPath).then(() => true).catch(() => false))) {
+            await fs.writeFile(fullPath, content);
+        }
     }
 });
 
 afterAll(async () => {
     await fs.rm(TEST_DIRS.OUTPUT, { recursive: true, force: true });
     await fs.rm(TEST_DIRS.CACHE, { recursive: true, force: true });
-    await fs.rm(TEST_DIRS.EXAMPLE_APP, { recursive: true, force: true });
+    // done
 });
 
 // Import all test files

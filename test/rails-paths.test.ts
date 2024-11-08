@@ -30,7 +30,9 @@ describe('Rails Path Resolution', () => {
         for (const [filePath, content] of Object.entries(files)) {
             const fullPath = path.join(EXAMPLE_APP_DIRS.ROOT, filePath)
             await fs.mkdir(path.dirname(fullPath), { recursive: true })
-            await fs.writeFile(fullPath, content.trim())
+            if (!(await fs.access(fullPath).then(() => true).catch(() => false))) {
+                await fs.writeFile(fullPath, content.trim())
+            }
         }
     })
 

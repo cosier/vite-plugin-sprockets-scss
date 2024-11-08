@@ -9,7 +9,7 @@ import { promises as fs } from 'fs'
 import { CompilationResult, ResolvedOptions, CompilationStats, Syntax } from '../types'
 import { Logger } from '../utils/logger'
 import { ERROR_CODES } from '../constants'
-import { SprocketsError, ErrorCode } from '../utils/errors'
+import { SprocketsError, ErrorCode, CompilationError } from '../utils/errors'
 import { PerformanceMonitor } from '../utils/performance'
 
 export class ScssCompiler {
@@ -38,7 +38,11 @@ export class ScssCompiler {
                         mixinPath,
                         `_${mixinPath}`,
                         `${mixinPath}.scss`,
-                        `_${mixinPath}.scss`
+                        `_${mixinPath}.scss`,
+                        'lib/' + mixinPath,
+                        `lib/_${mixinPath}`,
+                        `lib/${mixinPath}.scss`,
+                        `lib/_${mixinPath}.scss`
                     ];
 
                     for (const variant of variations) {
@@ -58,7 +62,7 @@ export class ScssCompiler {
                     throw new Error(`Global mixin file not found: ${mixinPath}`);
                 } catch (error) {
                     this.logger.error(`Failed to load global mixin: ${mixinPath}`, error as Error);
-                    throw new Error(`Failed to load global mixin '${mixinPath}': ${error.message}`);
+                    throw new Error(`Failed to load global mixin '${mixinPath}': ${(error as Error).message}`);
                 }
             })
         );
@@ -141,19 +145,22 @@ export class ScssCompiler {
             return compilationResult;
 
         } catch (error) {
-            const errorMessage = (error as Error).message
-            this.logger.error(
-                `Compilation error in ${filePath}`,
-                new SprocketsError(
-                    errorMessage,
-                    ErrorCode.COMPILATION_ERROR,
-                    { filePath, error }
-                )
+            const sassError = error as sass.Exception
+            const location = {
+                line: sassError.span?.start.line || 0,
+                column: sassError.span?.start.column || 0,
+                content: sassError.span && sassError.source ? this.formatErrorSource(sassError) : undefined
+            }
+            const compilationError = new CompilationError(
+                sassError.message || 'Unknown compilation error',
+                location,
+                filePath
             )
+            this.logger.error(compilationError.formatError())
             return {
                 css: '',
                 dependencies: [],
-                errors: [errorMessage],
+                errors: [compilationError],
                 stats: {
                     cacheSize: this.sourceMapCache.size,
                     duration: this.performanceMonitor?.getDuration() || 0
@@ -222,25 +229,41 @@ export class ScssCompiler {
                 }
             }
         } catch (error) {
-            const errorMessage = (error as Error).message
-            this.logger.error(
-                `File compilation error: ${filePath}`,
-                new SprocketsError(
-                    errorMessage,
-                    ErrorCode.COMPILATION_ERROR,
-                    { filePath, error }
-                )
+            const sassError = error as sass.Exception
+            const location = {
+                line: sassError.span?.start.line || 0,
+                column: sassError.span?.start.column || 0,
+                content: sassError.span && sassError.source ? this.formatErrorSource(sassError) : undefined
+            }
+            const compilationError = new CompilationError(
+                sassError.message || 'Unknown compilation error',
+                location,
+                filePath
             )
+            this.logger.error(compilationError.formatError())
             return {
                 css: '',
                 dependencies: [],
-                errors: [errorMessage],
+                errors: [compilationError],
                 stats: {
                     cacheSize: this.sourceMapCache.size,
                     duration: this.performanceMonitor?.getDuration() || 0
                 }
             }
         }
+    }
+
+    private formatErrorSource(error: sass.Exception): string {
+        if (!error.span || !error.source) return '';
+
+        const lines = error.source.split('\n');
+        const errorLine = lines[error.span.start.line - 1];
+        const pointer = ' '.repeat(error.span.start.column) + '^';
+
+        return [
+            `${error.span.start.line} | ${errorLine}`,
+            `${' '.repeat(String(error.span.start.line).length)} | ${pointer}`
+        ].join('\n');
     }
 
     private async writeIntermediateScss(filePath: string, content: string): Promise<void> {

@@ -7,6 +7,13 @@ export enum ErrorCode {
     PARSE_ERROR = 'PARSE_ERROR'
 }
 
+export interface SourceLocation {
+    line: number;
+    column: number;
+    file?: string;
+    content?: string;
+}
+
 export class SprocketsError extends Error {
     constructor(
         message: string,
@@ -15,6 +22,37 @@ export class SprocketsError extends Error {
     ) {
         super(message)
         this.name = 'SprocketsError'
+    }
+}
+
+export class CompilationError extends SprocketsError {
+    constructor(
+        message: string,
+        public readonly location: SourceLocation,
+        public readonly sourceFile: string,
+    ) {
+        super(
+            message,
+            ErrorCode.COMPILATION_ERROR,
+            { location, sourceFile }
+        );
+        this.name = 'CompilationError';
+    }
+
+    formatError(): string {
+        const location = this.location;
+        const fileName = path.relative(process.cwd(), this.sourceFile);
+
+        return [
+            '',
+            `Error in ${fileName}:${location.line}:${location.column}`,
+            `${this.message}`,
+            location.content ? [
+                '▼ Source:',
+                location.content,
+            ].join('\n') : '',
+            ''
+        ].join('\n');
     }
 }
 

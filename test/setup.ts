@@ -1,6 +1,7 @@
 // .vite/plugins/sprockets-scss/test/setup.ts
 
 import { afterAll, beforeAll } from 'bun:test'
+import { access } from 'fs/promises'
 import { rm, mkdir, writeFile } from 'fs/promises'
 import path from 'path'
 
@@ -90,7 +91,9 @@ beforeAll(async () => {
         const fullPath = path.join(TEST_DIRS.EXAMPLE_APP, filePath)
         await mkdir(path.dirname(fullPath), { recursive: true })
         console.debug(`Writing file: ${fullPath}`)
-        await writeFile(fullPath, content)
+        if (!(await access(fullPath).then(() => true).catch(() => false))) {
+            await writeFile(fullPath, content)
+        }
     }
 })
 

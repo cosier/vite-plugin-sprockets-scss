@@ -11,17 +11,17 @@ describe('Resolver - File Mapping', () => {
         // Create vendor file
         const vendorPath = path.join(EXAMPLE_APP_DIRS.VENDOR.STYLESHEETS, 'lib/select2.scss');
         await fs.mkdir(path.dirname(vendorPath), { recursive: true });
-        await fs.writeFile(vendorPath, '.select2-vendor { display: block; }');
+
+        if (!(await fs.access(vendorPath).then(() => true).catch(() => false))) {
+            await fs.writeFile(vendorPath, '.select2-vendor { display: block; }');
+        }
 
         // Ensure app paths don't exist
         const appCssPath = path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'lib/select2.css');
         const appScssPath = path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'lib/select2.scss');
 
         try {
-            // Remove app files if they exist
-            await fs.rm(appCssPath, { force: true });
-            await fs.rm(appScssPath, { force: true });
-
+            
             // Debug current state
             logger.debug('Test setup:');
             logger.debug(`Vendor file: ${vendorPath}`);
@@ -42,8 +42,7 @@ describe('Resolver - File Mapping', () => {
                 expect(content).toBe('.select2-vendor { display: block; }');
             }
         } finally {
-            // Clean up
-            await fs.rm(path.dirname(vendorPath), { recursive: true, force: true });
+            /
         }
     });
 });

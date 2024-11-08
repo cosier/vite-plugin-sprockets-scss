@@ -12,6 +12,7 @@ import { FileManager } from './core/file-manager'
 import { ScssCompiler } from './core/compiler'
 import { SprocketsResolver as Resolver } from './core/resolver'
 import { findFiles, createIgnorePatterns } from './utils/glob-utils'
+import { CompilationError } from './utils/errors'
 
 export default function viteSprocketsScss(
     options: SprocketsPluginOptions = {}
@@ -42,7 +43,11 @@ export default function viteSprocketsScss(
                 await processIndividualFiles()
                 await processEntryGroups()
             } catch (error) {
-                logger.error('Build process failed', error as Error)
+                if (error instanceof CompilationError) {
+                    logger.error(error.formatError())
+                } else {
+                    logger.error('Build process failed: ' + (error as Error).message)
+                }
                 throw error
             }
         },
@@ -77,11 +82,15 @@ export default function viteSprocketsScss(
                         fullPath
                     )
 
-                    if (result.errors && result.errors.length > 0) {
-                        logger.error(
-                            `Compilation errors in ${file}:`,
-                            new Error(result.errors.join('\n'))
-                        )
+                    if (result.errors?.length) {
+                        const errors = result.errors
+                            .map(error => error instanceof CompilationError ?
+                                error.formatError() :
+                                String(error)
+                            )
+                            .join('\n')
+
+                        logger.error(`Failed to compile ${file}:\n${errors}`)
                         continue
                     }
 
@@ -91,8 +100,12 @@ export default function viteSprocketsScss(
                         dependencies: result.dependencies,
                     })
                 }
-            } catch (error) {
-                logger.error(`Error processing ${file}:`, error as Error)
+            } catch (error: unknown) {
+                if (error instanceof CompilationError) {
+                    logger.error(error.formatError())
+                } else {
+                    logger.error(`Error processing ${file}: ${(error as Error).message}`)
+                }
             }
         }
         logger.groupEnd()
@@ -104,13 +117,12 @@ export default function viteSprocketsScss(
             'app/assets/stylesheets'
         )
 
-        // logger.group('Processing entry groups')
+        logger.group('Processing entry groups')
         for (const [groupName, patterns] of Object.entries(
             resolvedOptions.entryGroups
         )) {
-           // console.log('groupName', groupName)
             try {
-                // logger.group(`Group: ${groupName}`)
+                logger.group(`Group: ${groupName}`)
                 let combinedContent = ''
 
                 const matchedFiles = await findFiles(patterns, {
@@ -118,7 +130,6 @@ export default function viteSprocketsScss(
                 })
 
                 for (const file of matchedFiles) {
-                  // console.log("file", file)
                     const fullPath = path.join(stylesDir, file)
                     const content = await fileManager.readFile(fullPath)
                     const resolvedContent = await resolver.resolveRequires(
@@ -133,11 +144,15 @@ export default function viteSprocketsScss(
                     `${groupName}.scss`
                 )
 
-                if (result.errors && result.errors.length > 0) {
-                    logger.error(
-                        `Compilation errors in group ${groupName}:`,
-                        new Error(result.errors.join('\n'))
-                    )
+                if (result.errors?.length) {
+                    const errors = result.errors
+                        .map(error => error instanceof CompilationError ?
+                            error.formatError() :
+                            String(error)
+                        )
+                        .join('\n')
+
+                    logger.error(`Failed to compile group ${groupName}:\n${errors}`)
                     continue
                 }
 
@@ -151,11 +166,12 @@ export default function viteSprocketsScss(
                 )
 
                 logger.groupEnd()
-            } catch (error) {
-                logger.error(
-                    `Error processing group ${groupName}:`,
-                    error as Error
-                )
+            } catch (error: unknown) {
+                if (error instanceof CompilationError) {
+                    logger.error(error.formatError())
+                } else {
+                    logger.error(`Error processing group ${groupName}: ${(error as Error).message}`)
+                }
                 logger.groupEnd()
             }
         }

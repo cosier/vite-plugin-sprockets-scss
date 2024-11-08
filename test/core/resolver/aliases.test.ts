@@ -13,7 +13,9 @@ describe('Resolver - Aliases', () => {
 
         // Ensure directory exists
         await fs.mkdir(path.dirname(testPath), { recursive: true });
-        await Bun.write(testPath, '.test { color: red; }');
+        if (!(await fs.access(testPath).then(() => true).catch(() => false))) {
+            await fs.writeFile(testPath, '.test { color: red; }');
+        }
 
         try {
             const resolvedPath = await resolver.resolveImportPath(
@@ -22,18 +24,12 @@ describe('Resolver - Aliases', () => {
                 EXAMPLE_APP_DIRS.ROOT
             );
             if (!resolvedPath) {
-                throw new Error('Failed to resolve path');
+                throw new Error(`Failed to resolve path: ${testPath}`);
             }
+            
             expect(path.normalize(resolvedPath)).toContain('app/assets/stylesheets/lib/component');
         } finally {
-            // Clean up test file
-            try {
-                await fs.unlink(testPath);
-                // Clean up directory if empty
-                await fs.rmdir(path.dirname(testPath), { recursive: true });
-            } catch (error) {
-                // Ignore cleanup errors
-            }
+            // done
         }
     });
 

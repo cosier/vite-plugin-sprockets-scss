@@ -76,7 +76,10 @@ describe('Sprockets SCSS Plugin', () => {
         for (const [filePath, content] of files) {
             const fullPath = path.join(EXAMPLE_APP_DIRS.ROOT, filePath);
             await fs.mkdir(path.dirname(fullPath), { recursive: true });
-            await fs.writeFile(fullPath, content);
+            // only write file if it doesn't exist
+            if (!(await fs.access(fullPath).then(() => true).catch(() => false))) {
+                await fs.writeFile(fullPath, content);
+            }
         }
 
         logger?.debug(`Created test files: ${files.map(([f]) => f).join(', ')}`);
@@ -190,15 +193,12 @@ describe('Sprockets SCSS Plugin', () => {
         const libDir = path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'lib');
         await fs.mkdir(libDir, { recursive: true });
 
-        // Create test files
-        await fs.writeFile(
-            path.join(libDir, 'select2.css'),
-            '.select2 { color: blue; }'
-        );
-        await fs.writeFile(
-            path.join(libDir, 'select2.scss'),
-            '.select2-container { display: block; }'
-        );
+        if (!(await fs.access(path.join(libDir, 'select2.scss')).then(() => true).catch(() => false))) {
+            await fs.writeFile(
+                path.join(libDir, 'select2.scss'),
+                '.select2-container { display: block; }'
+            );
+        }
 
         // First test with CSS file present
         const resolvedCssPath = resolver.findFileInPaths('select2', EXAMPLE_APP_DIRS.ROOT);
@@ -232,8 +232,10 @@ describe('Sprockets SCSS Plugin', () => {
 
     test('handles file mapping with includePaths fallback', async () => {
         const vendorPath = path.join(EXAMPLE_APP_DIRS.VENDOR.STYLESHEETS, 'lib/select2.scss');
-        await fs.mkdir(path.dirname(vendorPath), { recursive: true });
-        await fs.writeFile(vendorPath, '.select2-vendor { display: block; }');
+        await fs.mkdir(path.dirname(vendorPath), { recursive: true });  
+        if (!(await fs.access(vendorPath).then(() => true).catch(() => false))) {
+            await fs.writeFile(vendorPath, '.select2-vendor { display: block; }');
+        }
 
         const originalPath = path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'lib/select2.css');
         const scssPath = path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'lib/select2.scss');
@@ -261,7 +263,9 @@ describe('Sprockets SCSS Plugin', () => {
     test('handles aliases', async () => {
         const aliasPath = path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'lib/component.scss');
         await fs.mkdir(path.dirname(aliasPath), { recursive: true });
-        await fs.writeFile(aliasPath, '.component { color: blue; }');
+        if (!(await fs.access(aliasPath).then(() => true).catch(() => false))) {
+            await fs.writeFile(aliasPath, '.component { color: blue; }');
+        }
 
         try {
             const resolvedPath = await resolver.resolveImportPath('~lib/component', EXAMPLE_APP_DIRS.ROOT, EXAMPLE_APP_DIRS.ROOT);
@@ -272,7 +276,7 @@ describe('Sprockets SCSS Plugin', () => {
             expect(resolvedPath).not.toBeNull();
             expect(path.normalize(resolvedPath)).toContain('app/assets/stylesheets/lib/component');
         } finally {
-            await fs.rm(aliasPath, { force: true }).catch(() => {});
+            // done
         }
     });
 
@@ -294,18 +298,19 @@ describe('Sprockets SCSS Plugin', () => {
         const circularBPath = path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'circular-b.scss');
 
         // Create test files with minimal whitespace
-        await fs.writeFile(circularAPath, '// = require "circular-b"\n.circular-a { color: red; }');
-        await fs.writeFile(circularBPath, '// = require "circular-a"\n.circular-b { color: blue; }');
+        if (!(await fs.access(circularAPath).then(() => true).catch(() => false))) {
+            await fs.writeFile(circularAPath, '// = require "circular-b"\n.circular-a { color: red; }');
+        }
+        if (!(await fs.access(circularBPath).then(() => true).catch(() => false))) {
+            await fs.writeFile(circularBPath, '// = require "circular-a"\n.circular-b { color: blue; }');
+        }
 
         try {
             const content = await fs.readFile(circularAPath, 'utf-8');
             const promise = resolver.resolveRequires(content, circularAPath);
             await expect(promise).rejects.toThrow(CircularDependencyError);
         } finally {
-            await Promise.all([
-                fs.rm(circularAPath, { force: true }).catch(() => {}),
-                fs.rm(circularBPath, { force: true }).catch(() => {})
-            ]);
+            // done
         }
     });
 

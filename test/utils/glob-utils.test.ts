@@ -16,8 +16,12 @@ describe('Glob Utilities', () => {
     test('findFiles finds matching files', async () => {
         // Setup test directory
         await fs.mkdir(path.join(testDir, 'nested'), { recursive: true })
-        await fs.writeFile(path.join(testDir, 'test1.scss'), '')
-        await fs.writeFile(path.join(testDir, 'nested/test2.scss'), '')
+        if (!(await fs.access(path.join(testDir, 'test1.scss')).then(() => true).catch(() => false))) { 
+            await fs.writeFile(path.join(testDir, 'test1.scss'), '')
+        }
+        if (!(await fs.access(path.join(testDir, 'nested/test2.scss')).then(() => true).catch(() => false))) {
+            await fs.writeFile(path.join(testDir, 'nested/test2.scss'), '')
+        }
 
         const files = await findFiles('**/*.scss', { cwd: testDir })
         expect(files).toHaveLength(2)
