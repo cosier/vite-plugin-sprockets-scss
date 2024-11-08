@@ -1,35 +1,38 @@
-import { describe, expect, test } from "bun:test";
-import { ScssCompiler } from '~/core/compiler';
-import { createTestContext } from '../helpers';
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
-import { EXAMPLE_APP_DIRS } from '../setup';
+import { assertEquals, assertExists, assertStringIncludes } from "@std/assert";
+import { describe, it } from "bdd";
+import { ScssCompiler } from "~/core/compiler.ts";
+import { createTestContext } from "~/test/helpers/context.ts";
+import * as path from "@std/path";
+import { EXAMPLE_APP_DIRS } from "~/test/setup.ts";
 
 describe('SCSS Compiler', () => {
-    const { options, logger } = createTestContext();
-    const compiler = new ScssCompiler(options, logger);
-
-    test('processes basic SCSS file', async () => {
-        const basicPath = path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'basic.scss');
-        const basic = await fs.readFile(basicPath, 'utf-8');
-        const result = await compiler.compile(basic, 'basic.scss');
-
-        expect(result.errors).toHaveLength(0);
-        expect(result.css).toContain('.test-component');
-        expect(result.css).toContain('background:');
+    const { options, logger } = createTestContext({
+        globalMixins: ['variables']
     });
 
-    test('compiles SCSS with source maps', async () => {
+    const compiler = new ScssCompiler(options, logger);
+
+    it('processes basic SCSS file', async () => {
         const basicPath = path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'basic.scss');
-        const basic = await fs.readFile(basicPath, 'utf-8');
+        const basic = await Deno.readTextFile(basicPath);
         const result = await compiler.compile(basic, 'basic.scss');
 
-        expect(result.map).toBeDefined();
-        expect(JSON.parse(result.map!)).toHaveProperty('version', 3);
+        assertEquals(result.errors.length, 0);
+        assertStringIncludes(result.css, '.test-component');
+        assertStringIncludes(result.css, 'background:');
+    });
+
+    it('compiles SCSS with source maps', async () => {
+        const basicPath = path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'basic.scss');
+        const basic = await Deno.readTextFile(basicPath);
+        const result = await compiler.compile(basic, 'basic.scss');
+
+        assertExists(result.map);
+        assertEquals(JSON.parse(result.map!).version, 3);
     });
 
     describe('Global Mixins', () => {
-        test('loads and includes global mixins', async () => {
+        it('loads and includes global mixins', async () => {
             const { compiler } = createTestContext({
                 globalMixins: ['variables']
             });
@@ -37,21 +40,28 @@ describe('SCSS Compiler', () => {
             const testScss = '.test { color: $brand-primary; }';
             const result = await compiler.compile(testScss, 'test.scss');
 
-            expect(result.css).toContain('#ff7700'); // $brand-primary value
-            expect(result.errors).toHaveLength(0);
+            assertStringIncludes(result.css, '#ff7700'); // $brand-primary value
+            assertEquals(result.errors.length, 0);
         });
 
-        test('throws error for missing global mixin', async () => {
+        it('throws error for missing global mixin', async () => {
             const { compiler } = createTestContext({
                 globalMixins: ['non-existent-file']
             });
 
-            await expect(
-                compiler.compile('.test {}', 'test.scss')
-            ).rejects.toThrow('Global mixin file not found');
+            try {
+                await compiler.compile('.test {}', 'test.scss');
+                throw new Error('Should have thrown error');
+            } catch (error: unknown) {
+                if (error instanceof Error) {
+                    assertStringIncludes(error.message, 'Global mixin file not found');
+                } else {
+                    throw new Error('Unexpected error type');
+                }
+            }
         });
 
-        test('handles multiple global mixins in correct order', async () => {
+        it('handles multiple global mixins in correct order', async () => {
             const { compiler } = createTestContext({
                 globalMixins: ['variables', '_mixins']
             });
@@ -63,9 +73,9 @@ describe('SCSS Compiler', () => {
 
             const result = await compiler.compile(testScss, 'test.scss');
 
-            expect(result.errors).toHaveLength(0);
-            expect(result.css).toContain('#ff7700');
-            expect(result.css).toContain('display: flex');
+            assertEquals(result.errors.length, 0);
+            assertStringIncludes(result.css, '#ff7700');
+            assertStringIncludes(result.css, 'display: flex');
         });
     });
 });

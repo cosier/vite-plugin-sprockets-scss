@@ -1,14 +1,18 @@
-import { describe, expect, test } from "bun:test";
-import { FileNotFoundError } from "../../src/utils/errors";
-import { createTestContext } from "../helpers/context";
+import { assertThrows } from "@std/assert";
+import { describe, it } from "@std/testing/bdd";
+import { FileNotFoundError } from "../../src/utils/errors.ts";
+import { createTestContext } from "../helpers/context.ts";
 
 describe('Error Handling - Missing Files', () => {
     const { resolver } = createTestContext();
 
-    test('handles missing files gracefully', async () => {
+    it('handles missing files gracefully', async () => {
         const missing = `//= require 'non-existent-file'`;
-        await expect(resolver.resolveRequires(missing, 'test.scss'))
-            .rejects
-            .toThrow(FileNotFoundError);
+        await assertThrows(
+            async () => {
+                await resolver.resolveRequires(missing, 'test.scss');
+            },
+            FileNotFoundError
+        );
     });
-}); 
+});

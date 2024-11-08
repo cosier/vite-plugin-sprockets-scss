@@ -6,11 +6,11 @@
 import * as sass from 'sass'
 import path from 'node:path'
 import { promises as fs } from 'node:fs'
-import { CompilationResult, ResolvedOptions, CompilationStats, Syntax } from '../types'
-import { Logger } from '../utils/logger'
-import { ERROR_CODES } from '../constants'
-import { SprocketsError, ErrorCode, CompilationError } from '../utils/errors'
-import { PerformanceMonitor } from '../utils/performance'
+import type { CompilationResult, ResolvedOptions, CompilationStats, Syntax } from "~/types/index.ts";
+import { Logger } from "~/utils/logger.ts";
+// import { ERROR_CODES } from "~/constants.ts";
+import { SprocketsError, ErrorCode, CompilationError } from "~/utils/errors.ts";
+import { PerformanceMonitor } from "~/utils/performance.ts";
 
 export class ScssCompiler {
     private logger: Logger

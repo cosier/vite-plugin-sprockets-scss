@@ -1,16 +1,15 @@
-import { describe, expect, test } from "bun:test";
-import path from "path";
-import { promises as fs } from 'fs';
-import { createTestContext } from "@test/helpers";
-import { EXAMPLE_APP_DIRS } from '../../setup';
+import { assertEquals, assertStringIncludes, assert } from "@std/assert";
+import { describe, it } from "@std/testing/bdd";
+import * as path from "@std/path";
+import { createTestContext } from "~/test/helpers/context.ts";
+import { EXAMPLE_APP_DIRS } from "~/test/setup.ts";
 
 describe('Resolver - Require Directives', () => {
     const { resolver } = createTestContext();
 
-    test('processes require directives', async () => {
-        const withRequires = await fs.readFile(
-            path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'with-requires.scss'),
-            'utf-8'
+    it('processes require directives', async () => {
+        const withRequires = await Deno.readTextFile(
+            path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'with-requires.scss')
         );
 
         const resolvedContent = await resolver.resolveRequires(
@@ -18,15 +17,14 @@ describe('Resolver - Require Directives', () => {
             path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'with-requires.scss')
         );
 
-        const normalizedDeps = resolvedContent.dependencies.map(dep => path.basename(dep));
+        const normalizedDeps = resolvedContent.dependencies.map((dep: string) => path.basename(dep));
 
-        expect(resolvedContent.content).toContain('$primary-color');
-        expect(resolvedContent.content).toContain('@mixin center');
-        expect(normalizedDeps).toContain('_variables.scss');
-        expect(normalizedDeps).toContain('_mixins.scss');
+        assertEquals(resolvedContent.content, '$primary-color');
+        assertEquals(resolvedContent.content, '@mixin center');
+        assertEquals(normalizedDeps, ['_variables.scss', '_mixins.scss']);
     });
 
-    test('respects file ordering', async () => {
+    it('respects file ordering', async () => {
         const testFile = path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'with-requires.scss');
         const withRequires = `
             // = require '_variables'
@@ -45,6 +43,6 @@ describe('Resolver - Require Directives', () => {
         const variablesIndex = content.indexOf('$primary-color');
         const mainIndex = content.indexOf('.main');
 
-        expect(variablesIndex).toBeLessThan(mainIndex);
+        assert(variablesIndex < mainIndex);
     });
 });

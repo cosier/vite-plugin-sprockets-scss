@@ -1,13 +1,12 @@
-import { promises as fs } from 'fs'
-import path from 'path'
-import { TEST_DIRS } from './setup'
+import * as path from "https://deno.land/std/path/mod.ts";
+import { TEST_DIRS } from './setup.ts';
 
 export async function setupFixtures(): Promise<void> {
-    const railsRoot = path.join(TEST_DIRS.FIXTURES, 'rails')
-    
+    const railsRoot = path.join(TEST_DIRS.FIXTURES, 'rails');
+
     // Clean up existing fixtures
     try {
-        await fs.rm(railsRoot, { recursive: true, force: true })
+        await Deno.remove(railsRoot, { recursive: true });
     } catch (error) {
         // Ignore if directory doesn't exist
     }
@@ -17,10 +16,10 @@ export async function setupFixtures(): Promise<void> {
         'app/assets/stylesheets/components',
         'vendor/assets/stylesheets',
         'node_modules/bootstrap/scss'
-    ]
+    ];
 
     for (const dir of directories) {
-        await fs.mkdir(path.join(railsRoot, dir), { recursive: true })
+        await Deno.mkdir(path.join(railsRoot, dir), { recursive: true });
     }
 
     // Create test files
@@ -40,14 +39,15 @@ export async function setupFixtures(): Promise<void> {
         `,
         'vendor/assets/stylesheets/_shared.scss': '.vendor-shared { color: red; }',
         'app/assets/stylesheets/components/_header.scss': '.header { color: $primary-color; }'
-    }
+    };
 
     for (const [filePath, content] of Object.entries(files)) {
-        const fullPath = path.join(railsRoot, filePath)
-        await fs.mkdir(path.dirname(fullPath), { recursive: true })
-        // only write file if it doesn't exist
-        if (!(await fs.access(fullPath).then(() => true).catch(() => false))) {
-            await fs.writeFile(fullPath, content.trim() + '\n')
+        const fullPath = path.join(railsRoot, filePath);
+        await Deno.mkdir(path.dirname(fullPath), { recursive: true });
+        try {
+            await Deno.stat(fullPath);
+        } catch {
+            await Deno.writeTextFile(fullPath, content.trim() + '\n');
         }
     }
-} 
+}

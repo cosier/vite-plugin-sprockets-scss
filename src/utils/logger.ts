@@ -3,7 +3,7 @@
  * @description: Logging and debugging utilities
  */
 
-import { CompilationError } from './errors'
+import { CompilationError } from "~/utils/errors.ts";
 
 export class Logger {
     private isDebug: boolean

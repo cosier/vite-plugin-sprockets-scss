@@ -3,20 +3,25 @@
  * @description: Plugin test suite
  */
 
-import { describe, expect, test, beforeAll, afterEach } from "bun:test";
-import { readFile, mkdir, writeFile, rename } from "fs/promises";
-import path from "path";
-import { FileManager } from "../src/core/file-manager";
-import { ScssCompiler } from "../src/core/compiler";
-import { SprocketsResolver } from "../src/core/resolver";
-import { createLogger } from "../src/utils/logger";
-import { resolveOptions } from "../src/config/options";
-import { ResolvedOptions } from "../src/types";
-import { CircularDependencyError } from "../src/utils/errors";
-import { FileNotFoundError } from "../src/utils/errors";
-import { PerformanceMonitor } from "../src/utils/performance";
-import { TEST_DIRS, EXAMPLE_APP_DIRS } from './setup'
-import { promises as fs } from 'fs';
+import { 
+  assertEquals, 
+  assertMatch, 
+  assertExists,
+  assert,
+  assertRejects,
+  assertNotEquals 
+} from "@std/assert";
+import { describe, it, beforeAll, afterEach } from "@std/testing/bdd";
+import * as path from "@std/path";
+import { createLogger } from "~/utils/logger.ts";
+import { resolveOptions } from "~/config/options.ts";
+import { FileManager } from "~/core/file-manager.ts";
+import { ScssCompiler } from "~/core/compiler.ts";
+import { SprocketsResolver } from "~/core/resolver.ts";
+import type { ResolvedOptions } from "~/types/index.ts";
+import { CircularDependencyError, FileNotFoundError } from "~/utils/errors.ts";
+import { PerformanceMonitor } from "~/utils/performance.ts";
+import { TEST_DIRS, EXAMPLE_APP_DIRS } from './setup.ts';
 
 describe('Sprockets SCSS Plugin', () => {
     let logger: ReturnType<typeof createLogger>;
@@ -36,7 +41,7 @@ describe('Sprockets SCSS Plugin', () => {
 
         // Create all required directories
         for (const dir of requiredDirs) {
-            await fs.mkdir(dir, { recursive: true });
+            await Deno.mkdir(dir, { recursive: true });
         }
 
         // Create test files in example app structure
@@ -75,10 +80,11 @@ describe('Sprockets SCSS Plugin', () => {
 
         for (const [filePath, content] of files) {
             const fullPath = path.join(EXAMPLE_APP_DIRS.ROOT, filePath);
-            await fs.mkdir(path.dirname(fullPath), { recursive: true });
-            // only write file if it doesn't exist
-            if (!(await fs.access(fullPath).then(() => true).catch(() => false))) {
-                await fs.writeFile(fullPath, content);
+            await Deno.mkdir(path.dirname(fullPath), { recursive: true });
+            try {
+                await Deno.stat(fullPath);
+            } catch {
+                await Deno.writeTextFile(fullPath, content);
             }
         }
 
@@ -124,21 +130,20 @@ describe('Sprockets SCSS Plugin', () => {
         fileManager.clearCache();
     });
 
-    test('processes basic SCSS file', async () => {
+    it('processes basic SCSS file', async () => {
         performance.start();
-        const basic = await readFile(path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'basic.scss'), 'utf-8');
+        const basic = await Deno.readTextFile(path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'basic.scss'));
         const result = await compiler.compile(basic, 'basic.scss');
 
-        expect(result.errors).toHaveLength(0);
-        expect(result.css).toContain('.test-component');
-        expect(result.css).toContain('background:');
-        expect(performance.getDuration()).toBeLessThan(5000);
+        assertEquals(result.errors.length, 0);
+        assertMatch(result.css, /\.test-component/);
+        assertMatch(result.css, /background:/);
+        assert(performance.getDuration() < 5000);
     });
 
-    test('processes require directives', async () => {
-        const withRequires = await readFile(
-            path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'with-requires.scss'),
-            'utf-8'
+    it('processes require directives', async () => {
+        const withRequires = await Deno.readTextFile(
+            path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'with-requires.scss')
         );
 
         const resolvedContent = await resolver.resolveRequires(
@@ -147,13 +152,13 @@ describe('Sprockets SCSS Plugin', () => {
         );
         const normalizedDeps = resolvedContent.dependencies.map((d: string) => path.basename(d));
 
-        expect(resolvedContent.content).toContain('$primary-color');
-        expect(resolvedContent.content).toContain('@mixin center');
-        expect(normalizedDeps).toContain('_variables.scss');
-        expect(normalizedDeps).toContain('_mixins.scss');
+        assertMatch(resolvedContent.content, /\$primary-color/);
+        assertMatch(resolvedContent.content, /@mixin center/);
+        assertEquals(normalizedDeps.includes('_variables.scss'), true);
+        assertEquals(normalizedDeps.includes('_mixins.scss'), true);
     });
 
-    test('handles require_tree directive', async () => {
+    it('handles require_tree directive', async () => {
         const testFile = path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'with-requires.scss');
         const withRequireTree = `
                 // = require '_variables'
@@ -167,14 +172,13 @@ describe('Sprockets SCSS Plugin', () => {
             `;
 
         const resolvedContent = await resolver.resolveRequires(withRequireTree, testFile)
-        expect(resolvedContent.content).toContain('.header');
-        expect(resolvedContent.content).toContain('.footer');
+        assertMatch(resolvedContent.content, /\.header/);
+        assertMatch(resolvedContent.content, /\.footer/);
     });
 
-    test('respects file ordering', async () => {
-        const withRequires = await readFile(
-            path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'with-requires.scss'),
-            'utf-8'
+    it('respects file ordering', async () => {
+        const withRequires = await Deno.readTextFile(
+            path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'with-requires.scss')
         );
 
         const resolvedContent = await resolver.resolveRequires(
@@ -186,15 +190,17 @@ describe('Sprockets SCSS Plugin', () => {
         const variablesIndex = content.indexOf('$primary-color');
         const mainIndex = content.indexOf('.main');
 
-        expect(variablesIndex).toBeLessThan(mainIndex);
+        assert(variablesIndex < mainIndex);
     });
 
-    test('handles file mapping with SCSS fallback', async () => {
+    it('handles file mapping with SCSS fallback', async () => {
         const libDir = path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'lib');
-        await fs.mkdir(libDir, { recursive: true });
+        await Deno.mkdir(libDir, { recursive: true });
 
-        if (!(await fs.access(path.join(libDir, 'select2.scss')).then(() => true).catch(() => false))) {
-            await fs.writeFile(
+        try {
+            await Deno.stat(path.join(libDir, 'select2.scss'));
+        } catch {
+            await Deno.writeTextFile(
                 path.join(libDir, 'select2.scss'),
                 '.select2-container { display: block; }'
             );
@@ -202,39 +208,41 @@ describe('Sprockets SCSS Plugin', () => {
 
         // First test with CSS file present
         const resolvedCssPath = resolver.findFileInPaths('select2', EXAMPLE_APP_DIRS.ROOT);
-        expect(resolvedCssPath).not.toBeNull();
-        expect(path.basename(resolvedCssPath!)).toBe('select2.scss');
+        assertNotEquals(resolvedCssPath, null);
+        assertEquals(path.basename(resolvedCssPath!), 'select2.scss');
 
         // Test SCSS fallback
         const originalPath = path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'lib/select2.css');
         const backupPath = originalPath + '.bak';
 
         try {
-            await rename(originalPath, backupPath);
+            await Deno.rename(originalPath, backupPath);
 
             const resolvedScssPath = resolver.findFileInPaths('select2', EXAMPLE_APP_DIRS.ROOT);
-            expect(resolvedScssPath).not.toBeNull();
-            expect(resolvedScssPath).toContain('select2.scss');
+            assertNotEquals(resolvedScssPath, null);
+            assertMatch(resolvedScssPath!, /select2\.scss$/);
 
             // Verify the content is loaded correctly
             if (resolvedScssPath) {
                 const content = await fileManager.readFile(resolvedScssPath);
-                expect(content).toContain('select2-container');
+                assertMatch(content, /select2-container/);
             }
         } finally {
             try {
-                await rename(backupPath, originalPath);
+                await Deno.rename(backupPath, originalPath);
             } catch {
                 // Ignore if backup didn't exist
             }
         }
     });
 
-    test('handles file mapping with includePaths fallback', async () => {
+    it('handles file mapping with includePaths fallback', async () => {
         const vendorPath = path.join(EXAMPLE_APP_DIRS.VENDOR.STYLESHEETS, 'lib/select2.scss');
-        await fs.mkdir(path.dirname(vendorPath), { recursive: true });  
-        if (!(await fs.access(vendorPath).then(() => true).catch(() => false))) {
-            await fs.writeFile(vendorPath, '.select2-vendor { display: block; }');
+        await Deno.mkdir(path.dirname(vendorPath), { recursive: true });
+        try {
+            await Deno.stat(vendorPath);
+        } catch {
+            await Deno.writeTextFile(vendorPath, '.select2-vendor { display: block; }');
         }
 
         const originalPath = path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'lib/select2.css');
@@ -242,29 +250,33 @@ describe('Sprockets SCSS Plugin', () => {
 
         try {
             // Remove original files if they exist
-            await fs.rm(originalPath, { force: true });
-            await fs.rm(scssPath, { force: true });
+            await Deno.remove(originalPath);
+            await Deno.remove(scssPath);
 
             // Test resolution from include path
             const resolvedPath = resolver.findFileInPaths('select2', EXAMPLE_APP_DIRS.ROOT);
-            expect(resolvedPath).not.toBeNull();
-            expect(resolvedPath).toContain('vendor/assets/stylesheets/lib/select2.scss');
+            assertNotEquals(resolvedPath, null);
+            assertMatch(resolvedPath!, /vendor\/assets\/stylesheets\/lib\/select2\.scss$/);
 
             // Verify content
             if (resolvedPath) {
                 const content = await fileManager.readFile(resolvedPath);
-                expect(content).toContain('select2-vendor');
+                assertMatch(content, /select2-vendor/);
             }
         } finally {
-            await fs.rm(vendorPath, { force: true }).catch(() => {});
+            try {
+                await Deno.remove(vendorPath);
+            } catch { /* ignore */ }
         }
     });
 
-    test('handles aliases', async () => {
+    it('handles aliases', async () => {
         const aliasPath = path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'lib/component.scss');
-        await fs.mkdir(path.dirname(aliasPath), { recursive: true });
-        if (!(await fs.access(aliasPath).then(() => true).catch(() => false))) {
-            await fs.writeFile(aliasPath, '.component { color: blue; }');
+        await Deno.mkdir(path.dirname(aliasPath), { recursive: true });
+        try {
+            await Deno.stat(aliasPath);
+        } catch {
+            await Deno.writeTextFile(aliasPath, '.component { color: blue; }');
         }
 
         try {
@@ -273,50 +285,58 @@ describe('Sprockets SCSS Plugin', () => {
                 throw new Error('Failed to resolve import path');
             }
 
-            expect(resolvedPath).not.toBeNull();
-            expect(path.normalize(resolvedPath)).toContain('app/assets/stylesheets/lib/component');
+            assertNotEquals(resolvedPath, null);
+            assertMatch(path.normalize(resolvedPath), /app\/assets\/stylesheets\/lib\/component/);
         } finally {
             // done
         }
     });
 
-    test('handles partial files correctly', () => {
-        expect(fileManager.isPartial('_variables.scss')).toBe(true);
-        expect(fileManager.isPartial('main.scss')).toBe(false);
+    it('handles partial files correctly', () => {
+        assertEquals(fileManager.isPartial('_variables.scss'), true);
+        assertEquals(fileManager.isPartial('main.scss'), false);
     });
 
-    test('compiles SCSS with source maps', async () => {
-        const basic = await readFile(path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'basic.scss'), 'utf-8');
+    it('compiles SCSS with source maps', async () => {
+        const basic = await Deno.readTextFile(path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'basic.scss'));
         const result = await compiler.compile(basic, 'basic.scss');
 
-        expect(result.map).toBeDefined();
-        expect(JSON.parse(result.map!)).toHaveProperty('version', 3);
+        assertExists(result.map);
+        assertEquals(JSON.parse(result.map!).version, 3);
     });
 
-    test('handles circular dependencies', async () => {
+    it('handles circular dependencies', async () => {
         const circularAPath = path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'circular-a.scss');
         const circularBPath = path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'circular-b.scss');
 
         // Create test files with minimal whitespace
-        if (!(await fs.access(circularAPath).then(() => true).catch(() => false))) {
-            await fs.writeFile(circularAPath, '// = require "circular-b"\n.circular-a { color: red; }');
+        try {
+            await Deno.stat(circularAPath);
+        } catch {
+            await Deno.writeTextFile(circularAPath, '// = require "circular-b"\n.circular-a { color: red; }');
         }
-        if (!(await fs.access(circularBPath).then(() => true).catch(() => false))) {
-            await fs.writeFile(circularBPath, '// = require "circular-a"\n.circular-b { color: blue; }');
+        try {
+            await Deno.stat(circularBPath);
+        } catch {
+            await Deno.writeTextFile(circularBPath, '// = require "circular-a"\n.circular-b { color: blue; }');
         }
 
         try {
-            const content = await fs.readFile(circularAPath, 'utf-8');
-            const promise = resolver.resolveRequires(content, circularAPath);
-            await expect(promise).rejects.toThrow(CircularDependencyError);
+            const content = await Deno.readTextFile(circularAPath);
+            await assertRejects(
+                async () => await resolver.resolveRequires(content, circularAPath),
+                CircularDependencyError
+            );
         } finally {
             // done
         }
     });
 
-    test('handles missing files gracefully', async () => {
+    it('handles missing files gracefully', async () => {
         const missing = `//= require 'non-existent-file'`;
-        const promise = resolver.resolveRequires(missing, 'test.scss');
-        await expect(promise).rejects.toThrow(FileNotFoundError);
+        await assertRejects(
+            async () => await resolver.resolveRequires(missing, 'test.scss'),
+            FileNotFoundError
+        );
     });
 });

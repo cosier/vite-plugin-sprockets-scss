@@ -1,5 +1,10 @@
 // test/utils/path-utils.test.ts
-import { describe, expect, test } from 'bun:test'
+import {
+    assertEquals,
+    assertStringIncludes,
+    assertFalse,
+} from "@std/assert";
+import { describe, it } from "@std/testing/bdd";
 import {
     normalizePath,
     createBoundaryMarker,
@@ -10,71 +15,63 @@ import {
     removeExtension,
     joinPaths,
     isPartialPath,
-} from '../../src/utils/path-utils'
+} from '../../src/utils/path-utils.ts';
 
 describe('Path Utilities', () => {
-    test('normalizePath handles different path formats', () => {
-        expect(normalizePath('path\\to\\file')).toBe('path/to/file')
-        expect(normalizePath('path/to/file')).toBe('path/to/file')
-        expect(normalizePath('path\\to\\file.scss')).toBe('path/to/file.scss')
+    it('normalizePath handles different path formats', () => {
+        assertEquals(normalizePath('path\\to\\file'), 'path/to/file')
+        assertEquals(normalizePath('path/to/file'), 'path/to/file')
+        assertEquals(normalizePath('path\\to\\file.scss'), 'path/to/file.scss')
     })
 
-    test('createBoundaryMarker generates correct markers', () => {
+    it('createBoundaryMarker generates correct markers', () => {
         const marker = createBoundaryMarker('path/to/file.scss')
-        expect(marker.start).toContain('FILE_BOUNDARY')
-        expect(marker.end).toContain('FILE_BOUNDARY')
-        expect(marker.path).toBe('path/to/file.scss')
+        assertStringIncludes(marker.start, 'FILE_BOUNDARY')
+        assertStringIncludes(marker.end, 'FILE_BOUNDARY')
+        assertEquals(marker.path, 'path/to/file.scss')
     })
 
-    test('matchWildcard handles different patterns', () => {
-        expect(matchWildcard('*.scss', 'file.scss')).toBe(true)
-        expect(matchWildcard('*.scss', 'file.css')).toBe(false)
-        expect(matchWildcard('test/**.scss', 'test/nested/file.scss')).toBe(
-            true
-        )
-        expect(matchWildcard('test/*.scss', 'test/file.scss')).toBe(true)
-        expect(matchWildcard('test/*.scss', 'test/nested/file.scss')).toBe(
-            false
-        )
+    it('matchWildcard handles different patterns', () => {
+        assertEquals(matchWildcard('*.scss', 'file.scss'), true)
+        assertEquals(matchWildcard('*.scss', 'file.css'), false)
+        assertEquals(matchWildcard('test/**.scss', 'test/nested/file.scss'), true)
+        assertEquals(matchWildcard('test/*.scss', 'test/file.scss'), true)
+        assertEquals(matchWildcard('test/*.scss', 'test/nested/file.scss'), false)
     })
 
-    test('isAbsoluteOrRelativePath detects path types', () => {
-        expect(isAbsoluteOrRelativePath('/absolute/path')).toBe(true)
-        expect(isAbsoluteOrRelativePath('./relative/path')).toBe(true)
-        expect(isAbsoluteOrRelativePath('../relative/path')).toBe(true)
-        expect(isAbsoluteOrRelativePath('non/relative/path')).toBe(false)
+    it('isAbsoluteOrRelativePath detects path types', () => {
+        assertEquals(isAbsoluteOrRelativePath('/absolute/path'), true)
+        assertEquals(isAbsoluteOrRelativePath('./relative/path'), true)
+        assertEquals(isAbsoluteOrRelativePath('../relative/path'), true)
+        assertEquals(isAbsoluteOrRelativePath('non/relative/path'), false)
     })
 
-    test('resolveRelativePath resolves paths correctly', () => {
-        expect(
-            resolveRelativePath('/root/src/file.scss', '/root/dist/output.css')
-        ).not.toContain('/root/src')
-        expect(resolveRelativePath('src/file.scss', 'dist/output.css')).toBe(
-            '../dist/output.css'
-        )
+    it('resolveRelativePath resolves paths correctly', () => {
+        assertFalse(resolveRelativePath('/root/src/file.scss', '/root/dist/output.css').includes('/root/src'))
+        assertEquals(resolveRelativePath('src/file.scss', 'dist/output.css'), '../dist/output.css')
     })
 
-    test('getExtension returns correct file extensions', () => {
-        expect(getExtension('file.scss')).toBe('.scss')
-        expect(getExtension('path/to/file.CSS')).toBe('.css')
-        expect(getExtension('no-extension')).toBe('')
+    it('getExtension returns correct file extensions', () => {
+        assertEquals(getExtension('file.scss'), '.scss')
+        assertEquals(getExtension('path/to/file.CSS'), '.css')
+        assertEquals(getExtension('no-extension'), '')
     })
 
-    test('removeExtension strips file extensions', () => {
-        expect(removeExtension('file.scss')).toBe('file')
-        expect(removeExtension('path/to/file.css')).toBe('path/to/file')
-        expect(removeExtension('no-extension')).toBe('no-extension')
+    it('removeExtension strips file extensions', () => {
+        assertEquals(removeExtension('file.scss'), 'file')
+        assertEquals(removeExtension('path/to/file.css'), 'path/to/file')
+        assertEquals(removeExtension('no-extension'), 'no-extension')
     })
 
-    test('joinPaths combines paths correctly', () => {
-        expect(joinPaths('path', 'to', 'file')).toBe('path/to/file')
-        expect(joinPaths('path/', '/to/', '/file')).toBe('path/to/file')
-        expect(joinPaths('path\\to', 'file')).toBe('path/to/file')
+    it('joinPaths combines paths correctly', () => {
+        assertEquals(joinPaths('path', 'to', 'file'), 'path/to/file')
+        assertEquals(joinPaths('path/', '/to/', '/file'), 'path/to/file')
+        assertEquals(joinPaths('path\\to', 'file'), 'path/to/file')
     })
 
-    test('isPartialPath identifies partial files', () => {
-        expect(isPartialPath('_partial.scss')).toBe(true)
-        expect(isPartialPath('regular.scss')).toBe(false)
-        expect(isPartialPath('path/to/_partial.scss')).toBe(true)
+    it('isPartialPath identifies partial files', () => {
+        assertEquals(isPartialPath('_partial.scss'), true)
+        assertEquals(isPartialPath('regular.scss'), false)
+        assertEquals(isPartialPath('path/to/_partial.scss'), true)
     })
 })

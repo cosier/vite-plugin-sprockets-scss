@@ -2,14 +2,14 @@
  * @file: .vite/plugins/sprockets-scss/test/integration.test.ts
  */
 
-import { describe, expect, test } from "bun:test";
-import viteSprocketsScss from "../src";
-import path from "path";
-import { readFile } from "fs/promises";
-import { TEST_DIRS } from "./setup";
+import { assert, assertEquals } from "@std/assert";
+import { describe, it } from "@std/testing/bdd";
+import viteSprocketsScss from "../mod.ts";
+import * as path from "@std/path";
+import { TEST_DIRS } from "./setup.ts";
 
 describe('Plugin Integration', () => {
-    test('processes complete stylesheet with real-world patterns', async () => {
+    it('processes complete stylesheet with real-world patterns', async () => {
         const plugin = viteSprocketsScss({
             root: TEST_DIRS.EXAMPLE_APP,
             includePaths: ['app/assets/stylesheets'],
@@ -30,14 +30,14 @@ describe('Plugin Integration', () => {
         });
 
         // Configure plugin
-        await plugin.configResolved?.();
+        await plugin.configResolved.handler();
 
         // Test plugin hooks
-        expect(plugin.name).toBe('vite-plugin-sprockets-scss');
-        expect(typeof plugin.buildStart).toBe('function');
+        assertEquals(plugin.name, 'vite-plugin-sprockets-scss');
+        assert(typeof plugin.buildStart.handler === 'function');
     });
 
-    test('handles real-world SCSS patterns', async () => {
+    it('handles real-world SCSS patterns', async () => {
         const scss = `
             //= require jquery-ui/resizable
             //= require bootstrap_and_overrides
@@ -68,9 +68,9 @@ describe('Plugin Integration', () => {
         });
 
         // Configure plugin before testing
-        await plugin.configResolved?.();
+        await plugin.configResolved.handler();
 
         // Now buildStart should work
-        await plugin.buildStart?.();
+        await plugin.buildStart.handler();
     });
 });

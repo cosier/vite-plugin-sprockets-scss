@@ -1,11 +1,9 @@
 // .vite/plugins/sprockets-scss/test/setup.ts
 
-import { afterAll, beforeAll } from 'bun:test'
-import { access } from 'fs/promises'
-import { rm, mkdir, writeFile } from 'fs/promises'
-import path from 'path'
+import { describe, it, beforeAll, afterAll } from "@std/testing/bdd";
+import * as path from "@std/path";
 
-const pluginRootDir = path.join(process.cwd())
+const pluginRootDir = path.join(Deno.cwd());
 
 export const TEST_DIRS = {
     TMP: path.join(pluginRootDir, 'tmp'),
@@ -45,16 +43,16 @@ beforeAll(async () => {
     // Create all necessary directories
     for (const dir of Object.values(EXAMPLE_APP_DIRS)) {
         if (typeof dir === 'string') {
-            await mkdir(dir, { recursive: true })
+            await Deno.mkdir(dir, { recursive: true })
         } else {
             for (const subdir of Object.values(dir)) {
-                await mkdir(subdir, { recursive: true })
+                await Deno.mkdir(subdir, { recursive: true })
             }
         }
     }
 
-    await mkdir(TEST_DIRS.OUTPUT, { recursive: true })
-    await mkdir(TEST_DIRS.CACHE, { recursive: true })
+    await Deno.mkdir(TEST_DIRS.OUTPUT, { recursive: true })
+    await Deno.mkdir(TEST_DIRS.CACHE, { recursive: true })
 
     debugger
     // Create test files
@@ -89,15 +87,17 @@ beforeAll(async () => {
 
     for (const [filePath, content] of Object.entries(files)) {
         const fullPath = path.join(TEST_DIRS.EXAMPLE_APP, filePath)
-        await mkdir(path.dirname(fullPath), { recursive: true })
+        await Deno.mkdir(path.dirname(fullPath), { recursive: true })
         console.debug(`Writing file: ${fullPath}`)
-        if (!(await access(fullPath).then(() => true).catch(() => false))) {
-            await writeFile(fullPath, content)
+        try {
+            await Deno.stat(fullPath)
+        } catch {
+            await Deno.writeTextFile(fullPath, content)
         }
     }
 })
 
 // Clean up after all tests
 afterAll(async () => {
-    await rm(TEST_DIRS.TMP, { recursive: true, force: true })
+    await Deno.remove(TEST_DIRS.TMP, { recursive: true })
 })

@@ -1,20 +1,22 @@
-import { describe, expect, test } from "bun:test";
-import path from "path";
-import { promises as fs } from 'fs';
-import { createTestContext } from "../../helpers/context";
-import { EXAMPLE_APP_DIRS } from '../../setup';
+import { assertEquals, assertExists } from "@std/assert";
+import { describe, it } from "@std/testing/bdd";
+import * as path from "@std/path";
+import { createTestContext } from "../../helpers/context.ts";
+import { EXAMPLE_APP_DIRS } from "../../setup.ts";
 
 describe('Resolver - Aliases', () => {
     const { resolver } = createTestContext();
 
-    test('handles aliases', async () => {
+    it('handles aliases', async () => {
         // Create a test file at the expected location
         const testPath = path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'lib/component.scss');
 
         // Ensure directory exists
-        await fs.mkdir(path.dirname(testPath), { recursive: true });
-        if (!(await fs.access(testPath).then(() => true).catch(() => false))) {
-            await fs.writeFile(testPath, '.test { color: red; }');
+        await Deno.mkdir(path.dirname(testPath), { recursive: true });
+        try {
+            await Deno.stat(testPath);
+        } catch {
+            await Deno.writeTextFile(testPath, '.test { color: red; }');
         }
 
         try {
@@ -26,15 +28,15 @@ describe('Resolver - Aliases', () => {
             if (!resolvedPath) {
                 throw new Error(`Failed to resolve path: ${testPath}`);
             }
-            
-            expect(path.normalize(resolvedPath)).toContain('app/assets/stylesheets/lib/component');
+
+            assertExists(path.normalize(resolvedPath).includes('app/assets/stylesheets/lib/component'));
         } finally {
             // done
         }
     });
 
-    test('resolves alias paths correctly', () => {
+    it('resolves alias paths correctly', () => {
         const aliasPath = resolver['resolveAliasPath']('~lib/component');
-        expect(aliasPath).toBe('app/assets/stylesheets/lib/component');
+        assertEquals(aliasPath, 'app/assets/stylesheets/lib/component');
     });
 });

@@ -1,20 +1,27 @@
-import path from 'path'
-import { FileManager } from "../../src/core/file-manager"
-import { ScssCompiler } from "../../src/core/compiler"
-import { SprocketsResolver } from "../../src/core/resolver"
-import { createLogger } from "../../src/utils/logger"
-import { resolveOptions } from "../../src/config/options"
-import { TestContext } from '../types'
-import { TEST_DIRS, EXAMPLE_APP_DIRS } from '../setup'
+import * as path from "@std/path";
+import { FileManager } from "~/core/file-manager.ts";
+import { ScssCompiler } from "~/core/compiler.ts";
+import { SprocketsResolver } from "~/core/resolver.ts";
+import { createLogger } from "~/utils/logger.ts";
+import { resolveOptions } from "~/config/options.ts";
+import type { TestContext } from "~/test/types/index.ts";
+import { TEST_DIRS, EXAMPLE_APP_DIRS } from "~/test/setup.ts";
 
-export function createTestContext(): TestContext {
+export function createTestContext({
+    globalMixins = [],
+    debug = true
+}: {
+    globalMixins?: string[],
+    debug?: boolean
+}): TestContext {
     const options = resolveOptions({
         root: EXAMPLE_APP_DIRS.ROOT,
-        debug: true,
+        debug: debug,
         includePaths: [
             EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS,
             EXAMPLE_APP_DIRS.VENDOR.STYLESHEETS,
             path.join(EXAMPLE_APP_DIRS.NODE_MODULES, 'bootstrap/scss'),
+            ...(globalMixins || [])
         ],
         entryGroups: {
             application: ['application.scss'],

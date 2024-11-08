@@ -3,12 +3,12 @@
  * @description: File system operations and management
  */
 
-import fs from 'fs/promises'
-import { existsSync } from 'fs'
-import path from 'path'
-import { ProcessedFile, ResolvedOptions } from '../types'
-import { Logger } from '../utils/logger'
-import { OUTPUT_DIRS } from '../config/defaults'
+import * as fs from "@std/fs/promises";
+import { existsSync } from "@std/fs";
+import * as path from "@std/path";
+import type { ProcessedFile, ResolvedOptions } from "~/types/index.ts";
+import type { Logger } from "~/utils/logger.ts";
+import { OUTPUT_DIRS } from "~/config/defaults.ts";
 
 export class FileManager {
     private logger: Logger

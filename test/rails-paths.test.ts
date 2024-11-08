@@ -1,11 +1,11 @@
-import { describe, expect, test, beforeAll } from 'bun:test'
-import path from 'path'
-import { promises as fs } from 'fs'
-import { createTestContext } from './helpers/context'
-import { EXAMPLE_APP_DIRS } from './setup'
+import { describe, it, beforeAll } from "@std/testing/bdd";
+import { assertEquals, assertExists, assertStringIncludes, assert } from "@std/assert";
+import * as path from "@std/path";
+import { createTestContext } from './helpers/context.ts';
+import { EXAMPLE_APP_DIRS } from './setup.ts';
 
 describe('Rails Path Resolution', () => {
-    const { resolver } = createTestContext()
+    const { resolver } = createTestContext();
 
     beforeAll(async () => {
         // Create test files
@@ -25,36 +25,38 @@ describe('Rails Path Resolution', () => {
             `,
             'vendor/assets/stylesheets/_shared.scss': '.vendor-shared { color: red; }',
             'app/assets/stylesheets/components/_header.scss': '.header { color: $primary-color; }'
-        }
+        };
 
         for (const [filePath, content] of Object.entries(files)) {
-            const fullPath = path.join(EXAMPLE_APP_DIRS.ROOT, filePath)
-            await fs.mkdir(path.dirname(fullPath), { recursive: true })
-            if (!(await fs.access(fullPath).then(() => true).catch(() => false))) {
-                await fs.writeFile(fullPath, content.trim())
+            const fullPath = path.join(EXAMPLE_APP_DIRS.ROOT, filePath);
+            await Deno.mkdir(path.dirname(fullPath), { recursive: true });
+            try {
+                await Deno.stat(fullPath);
+            } catch {
+                await Deno.writeTextFile(fullPath, content.trim());
             }
         }
-    })
+    });
 
-    test('resolves application.scss with all dependencies', async () => {
-        const applicationScss = path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'application.scss')
-        const content = await fs.readFile(applicationScss, 'utf-8')
+    it('resolves application.scss with all dependencies', async () => {
+        const applicationScss = path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'application.scss');
+        const content = await Deno.readTextFile(applicationScss);
 
-        const result = await resolver.resolveRequires(content, applicationScss)
+        const result = await resolver.resolveRequires(content, applicationScss);
 
-        expect(result.content).toContain('primary-color')
-        expect(result.content).toContain('header')
-        expect(result.dependencies.length).toBeGreaterThan(0)
-    })
+        assertStringIncludes(result.content, 'primary-color');
+        assertStringIncludes(result.content, 'header');
+        assertExists(result.dependencies.length > 0);
+    });
 
-    test('prefers app/assets over vendor/assets', async () => {
-        const content = `// = require '_shared'`
+    it('prefers app/assets over vendor/assets', async () => {
+        const content = `// = require '_shared'`;
         const result = await resolver.resolveRequires(
             content,
             path.join(EXAMPLE_APP_DIRS.ASSETS.STYLESHEETS, 'test.scss')
-        )
+        );
 
-        expect(result.content).toContain('app-shared')
-        expect(result.content).not.toContain('vendor-shared')
-    })
-})
+        assertStringIncludes(result.content, 'app-shared');
+        assert(!result.content.includes('vendor-shared'));
+    });
+});

@@ -1,15 +1,14 @@
-import { promises as fs } from 'fs'
-import path from 'path'
-import { TEST_DIRS } from '../setup'
+import { join, dirname } from "https://deno.land/std/path/mod.ts";
+import { TEST_DIRS } from '../setup.ts';
 
 export async function readFixture(fileName: string): Promise<string> {
     try {
-        const filePath = path.join(TEST_DIRS.FIXTURES, fileName)
-        return await fs.readFile(filePath, 'utf-8')
+        const filePath = join(TEST_DIRS.FIXTURES, fileName);
+        return await Deno.readTextFile(filePath);
     } catch (error) {
         throw new Error(
             `Failed to read fixture file ${fileName}: ${error.message}`
-        )
+        );
     }
 }
 
@@ -18,14 +17,16 @@ export async function writeFixture(
     content: string
 ): Promise<void> {
     try {
-        const filePath = path.join(TEST_DIRS.FIXTURES, fileName)
-        await fs.mkdir(path.dirname(filePath), { recursive: true })
-        if (!(await fs.access(filePath).then(() => true).catch(() => false))) {
-            await fs.writeFile(filePath, content, 'utf-8')
+        const filePath = join(TEST_DIRS.FIXTURES, fileName);
+        await Deno.mkdir(dirname(filePath), { recursive: true });
+        try {
+            await Deno.stat(filePath);
+        } catch {
+            await Deno.writeTextFile(filePath, content);
         }
     } catch (error) {
         throw new Error(
             `Failed to write fixture file ${fileName}: ${error.message}`
-        )
+        );
     }
 }

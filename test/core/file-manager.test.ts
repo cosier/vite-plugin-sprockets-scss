@@ -1,11 +1,12 @@
-import { describe, expect, test } from "bun:test";
-import { createTestContext } from "../helpers/context";
+import { assertEquals } from "@std/assert";
+import { describe, it } from "@std/testing/bdd";
+import { createTestContext } from "~/test/helpers/context.ts";
 
 describe('File Manager', () => {
     const { fileManager } = createTestContext();
 
-    test('handles partial files correctly', () => {
-        expect(fileManager.isPartial('_variables.scss')).toBe(true);
-        expect(fileManager.isPartial('main.scss')).toBe(false);
+    it('handles partial files correctly', () => {
+        assertEquals(fileManager.isPartial('_variables.scss'), true);
+        assertEquals(fileManager.isPartial('main.scss'), false);
     });
-}); 
+});

@@ -1,105 +1,127 @@
 // test/utils/logger.test.ts
-import { describe, expect, test, beforeEach } from 'bun:test'
-import { Logger, createLogger } from '../../src/utils/logger'
+import { assertEquals, assertInstanceOf, assertStringIncludes } from "@std/assert";
+import { describe, it, beforeEach } from "@std/testing/bdd";
+import { Logger, createLogger } from "~/utils/logger.ts";
+
+// Add state variables
+let consoleLogs: string[] = [];
+let consoleErrors: string[] = [];
+let consoleWarns: string[] = [];
+let consoleDebugs: string[] = [];
+let consoleGroups: string[] = [];
+let groupDepth = 0;
+
+// Create a proper Console mock with all required methods
+const mockConsole = {
+  log: (msg: string) => consoleLogs.push(msg),
+  error: (msg: string) => consoleErrors.push(msg),
+  warn: (msg: string) => consoleWarns.push(msg),
+  debug: (msg: string) => consoleDebugs.push(msg),
+  info: (msg: string) => consoleLogs.push(msg),
+  group: (label: string) => {
+    consoleGroups.push(label);
+    groupDepth++;
+  },
+  groupEnd: () => {
+    groupDepth = Math.max(0, groupDepth - 1);
+  },
+  groupCollapsed: () => {},
+  assert: () => {},
+  clear: () => {},
+  count: () => {},
+  countReset: () => {},
+  dir: () => {},
+  dirxml: () => {},
+  table: () => {},
+  time: () => {},
+  timeEnd: () => {},
+  timeLog: () => {},
+  trace: () => {},
+  profile: () => {},
+  profileEnd: () => {},
+  timeStamp: () => {},
+} as unknown as Console;
+
+beforeEach(() => {
+  // Reset state
+  consoleLogs = [];
+  consoleErrors = [];
+  consoleWarns = [];
+  consoleDebugs = [];
+  consoleGroups = [];
+  groupDepth = 0;
+  
+  // Set mock console
+  globalThis.console = mockConsole;
+});
 
 describe('Logger', () => {
-    let consoleLogs: string[] = []
-    let consoleErrors: string[] = []
-    let consoleWarns: string[] = []
-    let consoleDebugs: string[] = []
-    let consoleGroups: string[] = []
-    let groupDepth = 0
+    it('creates logger with debug mode', () => {
+        const logger = createLogger(true);
+        assertInstanceOf(logger, Logger);
+    });
 
-    beforeEach(() => {
-        consoleLogs = []
-        consoleErrors = []
-        consoleWarns = []
-        consoleDebugs = []
-        consoleGroups = []
-        groupDepth = 0
+    it('logs info messages with proper prefix', () => {
+        const logger = new Logger(true);
+        logger.info('Test message');
+        assertStringIncludes(consoleLogs[0], '[Sprockets-SCSS]');
+        assertStringIncludes(consoleLogs[0], 'Test message');
+    });
 
-        global.console = {
-            log: (msg: string) => consoleLogs.push(msg),
-            error: (msg: string) => consoleErrors.push(msg),
-            warn: (msg: string) => consoleWarns.push(msg),
-            debug: (msg: string) => consoleDebugs.push(msg),
-            group: (label: string) => {
-                consoleGroups.push(label)
-                groupDepth++
-            },
-            groupEnd: () => {
-                groupDepth = Math.max(0, groupDepth - 1)
-            },
-        } as Console
-    })
+    it('logs error messages with stack trace', () => {
+        const logger = new Logger(true);
+        const error = new Error('Test error');
+        logger.error(error);
+        assertStringIncludes(consoleErrors[0], 'Test error');
+    });
 
-    test('creates logger with debug mode', () => {
-        const logger = createLogger(true)
-        expect(logger).toBeInstanceOf(Logger)
-    })
+    it('logs warning messages with prefix', () => {
+        const logger = new Logger(true);
+        logger.warn('Warning message');
+        assertStringIncludes(consoleWarns[0], 'Warning:');
+        assertStringIncludes(consoleWarns[0], 'Warning message');
+    });
 
-    test('logs info messages with proper prefix', () => {
-        const logger = new Logger(true)
-        logger.info('Test message')
-        expect(consoleLogs[0]).toContain('[Sprockets-SCSS]')
-        expect(consoleLogs[0]).toContain('Test message')
-    })
+    it('respects debug mode setting', () => {
+        const debugLogger = new Logger(true);
+        const nonDebugLogger = new Logger(false);
 
-    test('logs error messages with stack trace', () => {
-        const logger = new Logger(true)
-        const error = new Error('Test error')
-        logger.error('Error occurred', error)
-        expect(consoleErrors[0]).toContain('Error occurred')
-        expect(consoleErrors[1]).toContain('Stack:')
-    })
+        debugLogger.debug('Debug message');
+        assertEquals(consoleDebugs.length, 1);
 
-    test('logs warning messages with prefix', () => {
-        const logger = new Logger(true)
-        logger.warn('Warning message')
-        expect(consoleWarns[0]).toContain('Warning:')
-        expect(consoleWarns[0]).toContain('Warning message')
-    })
+        nonDebugLogger.debug('Should not appear');
+        assertEquals(consoleDebugs.length, 1);
+    });
 
-    test('respects debug mode setting', () => {
-        const debugLogger = new Logger(true)
-        const nonDebugLogger = new Logger(false)
+    it('handles trace messages in debug mode', () => {
+        const logger = new Logger(true);
+        logger.trace('Trace message');
+        assertStringIncludes(consoleLogs[0], 'Trace:');
+        assertStringIncludes(consoleLogs[0], 'Trace message');
+    });
 
-        debugLogger.debug('Debug message')
-        expect(consoleDebugs).toHaveLength(1)
+    it('manages group depth correctly', () => {
+        const logger = new Logger(true);
 
-        nonDebugLogger.debug('Should not appear')
-        expect(consoleDebugs).toHaveLength(1)
-    })
+        logger.info('Base level');
+        logger.group('Group 1');
+        logger.info('Level 1');
+        logger.group('Group 2');
+        logger.info('Level 2');
+        logger.groupEnd();
+        logger.info('Back to Level 1');
+        logger.groupEnd();
 
-    test('handles trace messages in debug mode', () => {
-        const logger = new Logger(true)
-        logger.trace('Trace message')
-        expect(consoleLogs[0]).toContain('Trace:')
-        expect(consoleLogs[0]).toContain('Trace message')
-    })
+        assertEquals(groupDepth, 0);
+        assertEquals(consoleGroups.length, 2);
+    });
 
-    test('manages group depth correctly', () => {
-        const logger = new Logger(true)
+    it('ignores groups when debug is false', () => {
+        const logger = new Logger(false);
+        logger.group('Should not appear');
+        logger.info('Test message');
+        logger.groupEnd();
 
-        logger.info('Base level')
-        logger.group('Group 1')
-        logger.info('Level 1')
-        logger.group('Group 2')
-        logger.info('Level 2')
-        logger.groupEnd()
-        logger.info('Back to Level 1')
-        logger.groupEnd()
-
-        expect(groupDepth).toBe(0)
-        expect(consoleGroups).toHaveLength(2)
-    })
-
-    test('ignores groups when debug is false', () => {
-        const logger = new Logger(false)
-        logger.group('Should not appear')
-        logger.info('Test message')
-        logger.groupEnd()
-
-        expect(consoleGroups).toHaveLength(0)
-    })
-})
+        assertEquals(consoleGroups.length, 0);
+    });
+});

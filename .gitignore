@@ -2,6 +2,6 @@ dist/
 node_modules/
 *.log
 .DS_Store
-/docs/file-summary.md
+#/docs/file-summary.md
 /public
 /tmp
