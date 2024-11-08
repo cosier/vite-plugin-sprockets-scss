@@ -96,6 +96,8 @@ export class ScssCompiler {
                 content
             ].join('\n')
 
+            console.log(`[compile] ${filePath}:\n`, contentWithImports, "\n")
+
             const result = sass.compileString(contentWithImports, {
                 loadPaths: [...this.options.includePaths, path.join(this.options.root, 'app/assets/stylesheets')],
                 sourceMap: true,

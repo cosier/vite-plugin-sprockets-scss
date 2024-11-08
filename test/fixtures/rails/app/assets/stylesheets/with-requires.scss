@@ -1,10 +1,11 @@
 
-//= require '_variables'
-//= require '_mixins'
-//= require_tree './components'
+                //= require '_variables'
+                //= require '_mixins'
+                //= require_tree './components'
 
-.main {
-    @include center;
-    background: $primary-color;
-    font-family: $font-family-base;
-}
+                .main {
+                    @include center;
+                    background: $primary-color;
+                    font-family: $font-family-base;
+                }
+            
