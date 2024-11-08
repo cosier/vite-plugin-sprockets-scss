@@ -4,8 +4,8 @@
  */
 
 import * as sass from 'sass'
-import path from 'path'
-import { promises as fs } from 'fs'
+import path from 'node:path'
+import { promises as fs } from 'node:fs'
 import { CompilationResult, ResolvedOptions, CompilationStats, Syntax } from '../types'
 import { Logger } from '../utils/logger'
 import { ERROR_CODES } from '../constants'

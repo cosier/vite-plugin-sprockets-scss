@@ -24,7 +24,7 @@ beforeAll(async () => {
     // Create test files
     const files = {
         'basic.scss': '.test-component { background: #fff; padding: 20px; }',
-        '_variables.scss': '$primary-color: #ff8100; $font-family-base: "myriad-pro", sans-serif;',
+        '_variables.scss': '$primary-color: #ff7700; $font-family-base: "myriad-pro", sans-serif;',
         '_mixins.scss': '@mixin center { display: flex; align-items: center; justify-content: center; }',
         'components/_header.scss': '.header { background: $primary-color; }',
         'components/_footer.scss': '.footer { color: $primary-color; }',

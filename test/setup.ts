@@ -62,7 +62,7 @@ beforeAll(async () => {
         'app/assets/stylesheets/basic.scss':
             '.test-component { background: #fff; padding: 20px; }',
         'app/assets/stylesheets/_variables.scss':
-            '$primary-color: #ff8100; $font-family-base: "myriad-pro", sans-serif;',
+            '$primary-color: #ff7700; $font-family-base: "myriad-pro", sans-serif;',
         'app/assets/stylesheets/_mixins.scss':
             '@mixin center { display: flex; align-items: center; justify-content: center; }',
         'app/assets/stylesheets/components/_header.scss':

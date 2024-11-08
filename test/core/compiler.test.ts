@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { ScssCompiler } from '~/core/compiler';
-import { createTestContext } from '@test/helpers';
-import { promises as fs } from 'fs';
-import path from 'path';
+import { createTestContext } from '../helpers';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 import { EXAMPLE_APP_DIRS } from '../setup';
 
 describe('SCSS Compiler', () => {
@@ -37,7 +37,7 @@ describe('SCSS Compiler', () => {
             const testScss = '.test { color: $brand-primary; }';
             const result = await compiler.compile(testScss, 'test.scss');
 
-            expect(result.css).toContain('#ff8100'); // $brand-primary value
+            expect(result.css).toContain('#ff7700'); // $brand-primary value
             expect(result.errors).toHaveLength(0);
         });
 
@@ -64,7 +64,7 @@ describe('SCSS Compiler', () => {
             const result = await compiler.compile(testScss, 'test.scss');
 
             expect(result.errors).toHaveLength(0);
-            expect(result.css).toContain('#ff8100');
+            expect(result.css).toContain('#ff7700');
             expect(result.css).toContain('display: flex');
         });
     });

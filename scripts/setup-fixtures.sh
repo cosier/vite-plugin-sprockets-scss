@@ -22,7 +22,7 @@ cat > "$FIXTURES_DIR/basic.scss" << 'EOF'
 EOF
 
 cat > "$FIXTURES_DIR/_variables.scss" << 'EOF'
-$primary-color: #ff8100;
+$primary-color: #ff7700;
 $font-family-base: "myriad-pro", sans-serif;
 EOF
 

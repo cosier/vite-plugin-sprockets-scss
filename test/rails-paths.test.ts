@@ -16,7 +16,7 @@ describe('Rails Path Resolution', () => {
                 // = require_tree './components'
             `,
             'app/assets/stylesheets/_variables.scss': `
-                $primary-color: #ff8100;
+                $primary-color: #ff7700;
                 $font-family-base: 'myriad-pro', sans-serif;
             `,
             'app/assets/stylesheets/_shared.scss': `

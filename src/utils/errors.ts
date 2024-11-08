@@ -1,3 +1,5 @@
+import path from 'node:path'
+
 // Define error codes enum
 export enum ErrorCode {
     CIRCULAR_DEPENDENCY = 'CIRCULAR_DEPENDENCY',
